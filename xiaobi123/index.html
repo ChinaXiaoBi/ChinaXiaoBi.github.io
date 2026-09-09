@@ -184,20 +184,25 @@ const VIDEO_URLS = [
 ];
 
 const PRIZES = {
-  happy:{label:"教师节快乐",desc:"感谢您的辛勤付出！这是学生们最真挚的祝福。",weight:35,limit:Infinity,emoji:"🌷"},
-  first:{label:"一等奖",desc:"恭喜获得一等奖！神秘大奖一份，请联系学生代表领取 🎉",weight:5,limit:1,emoji:"🏆"},
-  second:{label:"二等奖",desc:"恭喜获得二等奖！精美礼品一份，请联系学生代表领取 🎊",weight:10,limit:2,emoji:"🥈"},
-  third:{label:"三等奖",desc:"恭喜获得三等奖！贴心小礼物一份，请联系学生代表领取 🎁",weight:15,limit:5,emoji:"🥉"},
-  fourth:{label:"四等奖",desc:"恭喜获得四等奖！惊喜小礼品一份，请联系学生代表领取 🌟",weight:35,limit:25,emoji:"🎀"}
+  happy:{label:"教师节快乐",desc:"感谢您的辛勤付出！这是学生们最真挚的祝福。",weight:67,limit:Infinity,emoji:"🌷"},
+  first:{label:"一等奖",desc:"恭喜获得一等奖！神秘大奖一份，请联系学生代表领取 🎉",weight:1,limit:1,emoji:"🏆"},
+  second:{label:"二等奖",desc:"恭喜获得二等奖！精美礼品一份，请联系学生代表领取 🎊",weight:2,limit:2,emoji:"🥈"},
+  third:{label:"三等奖",desc:"恭喜获得三等奖！贴心小礼物一份，请联系学生代表领取 🎁",weight:5,limit:5,emoji:"🥉"},
+  fourth:{label:"四等奖",desc:"恭喜获得四等奖！惊喜小礼品一份，请联系学生代表领取 🌟",weight:25,limit:25,emoji:"🎀"}
 };
 
 const BOX_ICONS = ["🎁","🎀","🎊","🎉","💝","🎈","🌟","💫","🎁"];
 const STORAGE_KEY = "teachers_day_2026_draw";
 
-// ===== 视频预加载（同域名小视频，轻量缓存） =====
-setTimeout(()=>{
-  VIDEO_URLS.forEach(u=>{const v=document.createElement("video");v.src=u;v.preload="auto"});
-},1500);
+// ===== 视频预加载：页面打开立即全部下载为blob，确保秒开 =====
+const VIDEO_BLOBS = [];
+let blobLoadCount = 0;
+VIDEO_URLS.forEach((u,i)=>{
+  fetch(u).then(r=>r.blob()).then(blob=>{
+    VIDEO_BLOBS[i]=URL.createObjectURL(blob);
+    blobLoadCount++;
+  }).catch(()=>{blobLoadCount++});
+});
 
 (function(){const c=document.getElementById("stars");for(let i=0;i<60;i++){const s=document.createElement("div");s.className="star";s.style.left=Math.random()*100+"%";s.style.top=Math.random()*100+"%";s.style.width=s.style.height=(Math.random()*3+1)+"px";s.style.setProperty("--d",(Math.random()*3+2)+"s");s.style.animationDelay=Math.random()*3+"s";c.appendChild(s)}})();
 
@@ -328,8 +333,14 @@ function showResultModal(prize){
   modal.classList.add("active");
   const video=document.getElementById("blessing-video");
   const loading=document.getElementById("video-loading");
-  // 每次随机选一个视频
-  const videoSrc = VIDEO_URLS[Math.floor(Math.random()*VIDEO_URLS.length)];
+  // 优先用已预加载完成的blob视频（秒开），没有就用原URL随机选
+  const readyBlobs = VIDEO_BLOBS.filter(x=>x);
+  let videoSrc;
+  if(readyBlobs.length>0){
+    videoSrc = readyBlobs[Math.floor(Math.random()*readyBlobs.length)];
+  } else {
+    videoSrc = VIDEO_URLS[Math.floor(Math.random()*VIDEO_URLS.length)];
+  }
   video.style.display="none";
   loading.style.display="flex";
   loading.innerHTML='<div class="spinner"></div><span>祝福视频加载中...</span>';
