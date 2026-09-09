@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>教师节快乐 · 惊喜盲盒</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+:root{--gold:#f5c842;--red:#e74c3c;--pink:#ff6b9d;--purple:#9b59b6;--blue:#3498db;--green:#2ecc71;--orange:#f39c12;--bg1:#1a1a2e;--bg2:#16213e;--bg3:#0f3460}
+html,body{width:100%;height:100%;overflow:hidden;font-family:-apple-system,BlinkMacSystemFont,'PingFang SC','Microsoft YaHei',sans-serif;background:var(--bg1);color:#fff}
+#stars{position:fixed;inset:0;z-index:0;pointer-events:none}
+.star{position:absolute;background:#fff;border-radius:50%;animation:twinkle var(--d,3s) ease-in-out infinite}
+@keyframes twinkle{0%,100%{opacity:.2;transform:scale(.8)}50%{opacity:1;transform:scale(1.2)}}
+.page{position:fixed;inset:0;z-index:10;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px;opacity:0;pointer-events:none;transition:opacity .6s ease}
+.page.active{opacity:1;pointer-events:auto}
+#paper-stage{position:fixed;inset:0;z-index:50;display:flex;align-items:center;justify-content:center;perspective:1200px;background:linear-gradient(135deg,var(--bg1),var(--bg2),var(--bg3))}
+.paper{width:min(85vw,420px);height:min(60vh,560px);background:linear-gradient(145deg,#fffdf5,#f5f0e0);border-radius:6px;box-shadow:0 30px 80px rgba(0,0,0,.5),0 0 0 1px rgba(0,0,0,.05);position:relative;transform-style:preserve-3d;animation:paperDrop 2.2s cubic-bezier(.22,1,.36,1) forwards;opacity:0}
+@keyframes paperDrop{0%{opacity:0;transform:translateY(-120vh) rotateX(60deg) rotateZ(-15deg) scale(.6)}15%{opacity:1}40%{transform:translateY(10vh) rotateX(30deg) rotateZ(8deg) scale(.95)}55%{transform:translateY(-5vh) rotateX(10deg) rotateZ(-4deg) scale(1)}70%{transform:translateY(2vh) rotateX(3deg) rotateZ(1deg) scale(1)}85%{transform:translateY(0) rotateX(0) rotateZ(0) scale(1)}100%{opacity:1;transform:translateY(0) rotateX(0) rotateZ(0) scale(1)}}
+.paper::before{content:'';position:absolute;inset:0;border-radius:6px;background:repeating-linear-gradient(0deg,transparent,transparent 28px,rgba(200,180,140,.15) 28px,rgba(200,180,140,.15) 29px);pointer-events:none}
+.paper-content{padding:40px 30px;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;color:#5a4a3a;position:relative;z-index:1}
+.paper-content .emoji{font-size:3.5rem;margin-bottom:16px;animation:bounce 1s ease infinite}
+@keyframes bounce{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
+.paper-content h2{font-size:1.8rem;color:#8b4513;margin-bottom:12px;letter-spacing:2px}
+.paper-content p{font-size:1rem;color:#a08060;line-height:1.8}
+.paper-content .tap-hint{margin-top:30px;font-size:.85rem;color:#b09070;animation:pulse 1.5s ease infinite}
+@keyframes pulse{0%,100%{opacity:.4}50%{opacity:1}}
+#greetings-page{background:linear-gradient(180deg,#1a1a2e 0%,#16213e 50%,#0f3460 100%)}
+.greetings-header{text-align:center;margin-bottom:24px;flex-shrink:0}
+.greetings-header h1{font-size:clamp(1.6rem,5vw,2.4rem);background:linear-gradient(135deg,var(--gold),var(--pink));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:8px}
+.greetings-header p{color:rgba(255,255,255,.6);font-size:.95rem}
+.greetings-scroll{flex:1;overflow-y:auto;width:100%;max-width:600px;padding:10px 0;scrollbar-width:none}
+.greetings-scroll::-webkit-scrollbar{display:none}
+.greeting-card{background:rgba(255,255,255,.06);backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,.1);border-radius:16px;padding:20px 24px;margin-bottom:14px;animation:cardIn .5s ease both;position:relative;overflow:hidden}
+.greeting-card::before{content:'';position:absolute;left:0;top:0;bottom:0;width:4px;background:linear-gradient(180deg,var(--gold),var(--pink));border-radius:4px 0 0 4px}
+.greeting-card .num{position:absolute;top:12px;right:16px;font-size:.75rem;color:rgba(255,255,255,.25);font-weight:700}
+.greeting-card .text{font-size:1rem;line-height:1.8;color:rgba(255,255,255,.9);padding-right:30px}
+.greeting-card .from{margin-top:10px;font-size:.8rem;color:rgba(255,255,255,.4)}
+@keyframes cardIn{from{opacity:0;transform:translateX(-30px)}to{opacity:1;transform:translateX(0)}}
+.close-btn{margin-top:20px;flex-shrink:0;padding:14px 48px;background:linear-gradient(135deg,var(--gold),var(--orange));border:none;border-radius:50px;color:#1a1a2e;font-size:1.05rem;font-weight:700;cursor:pointer;box-shadow:0 8px 30px rgba(245,200,66,.4);transition:transform .2s,box-shadow .2s;letter-spacing:2px}
+.close-btn:active{transform:scale(.95);box-shadow:0 4px 15px rgba(245,200,66,.3)}
+#lottery-page{background:linear-gradient(180deg,#0f3460 0%,#16213e 50%,#1a1a2e 100%)}
+.lottery-header{text-align:center;margin-bottom:20px;flex-shrink:0}
+.lottery-header h1{font-size:clamp(1.4rem,4.5vw,2rem);color:var(--gold);margin-bottom:6px;text-shadow:0 0 20px rgba(245,200,66,.3)}
+.lottery-header p{color:rgba(255,255,255,.55);font-size:.85rem}
+.lottery-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;width:min(90vw,420px);flex-shrink:0}
+.box{aspect-ratio:1;border-radius:16px;position:relative;cursor:pointer;background:linear-gradient(145deg,#2a2a4a,#1e1e3a);border:2px solid rgba(255,255,255,.1);display:flex;align-items:center;justify-content:center;font-size:2.2rem;transition:all .3s ease;overflow:hidden}
+.box::after{content:'';position:absolute;inset:0;background:linear-gradient(135deg,rgba(255,255,255,.08),transparent 50%);pointer-events:none}
+.box:hover:not(.opened):not(.disabled){transform:translateY(-4px) scale(1.03);border-color:var(--gold);box-shadow:0 8px 25px rgba(245,200,66,.2)}
+.box.disabled{cursor:not-allowed;opacity:.5}
+.box.opened{cursor:default;border-color:transparent;background:transparent;box-shadow:none}
+.box.opened .box-inner{display:none}
+.box.opened .prize-reveal{display:flex}
+.box.shaking{animation:shake .5s ease}
+@keyframes shake{0%,100%{transform:translateX(0)}20%{transform:translateX(-6px) rotate(-2deg)}40%{transform:translateX(6px) rotate(2deg)}60%{transform:translateX(-4px) rotate(-1deg)}80%{transform:translateX(4px) rotate(1deg)}}
+.box.opening{animation:boxOpen .6s ease forwards}
+@keyframes boxOpen{0%{transform:scale(1)}30%{transform:scale(1.15)}60%{transform:scale(.9)}100%{transform:scale(1);background:transparent;border-color:transparent}}
+.box .glow{position:absolute;inset:-50%;background:radial-gradient(circle,rgba(245,200,66,.6),transparent 60%);opacity:0;transition:opacity .3s;pointer-events:none}
+.box.opening .glow{opacity:1;animation:glowBurst .6s ease forwards}
+@keyframes glowBurst{0%{opacity:0;transform:scale(.5)}50%{opacity:1}100%{opacity:0;transform:scale(2)}}
+.prize-reveal{display:none;flex-direction:column;align-items:center;justify-content:center;gap:4px;animation:revealIn .4s ease .3s both}
+@keyframes revealIn{from{opacity:0;transform:scale(.5)}to{opacity:1;transform:scale(1)}}
+.prize-reveal .icon{font-size:2rem}
+.prize-reveal .label{font-size:.65rem;color:rgba(255,255,255,.7);text-align:center;line-height:1.3}
+.prize-reveal.winner{animation:winnerPulse 1s ease infinite}
+@keyframes winnerPulse{0%,100%{transform:scale(1)}50%{transform:scale(1.1)}}
+.lottery-footer{margin-top:20px;text-align:center;flex-shrink:0;min-height:60px}
+.draw-result{font-size:1.1rem;color:var(--gold);margin-bottom:12px;animation:fadeInUp .5s ease both}
+@keyframes fadeInUp{from{opacity:0;transform:translateY(15px)}to{opacity:1;transform:translateY(0)}}
+.view-result-btn{padding:14px 40px;background:linear-gradient(135deg,var(--pink),var(--red));border:none;border-radius:50px;color:#fff;font-size:1rem;font-weight:700;cursor:pointer;box-shadow:0 8px 30px rgba(231,76,60,.4);animation:fadeInUp .5s ease .2s both,btnGlow 2s ease infinite;letter-spacing:2px}
+@keyframes btnGlow{0%,100%{box-shadow:0 8px 30px rgba(231,76,60,.4)}50%{box-shadow:0 8px 40px rgba(231,76,60,.7)}}
+.view-result-btn:active{transform:scale(.95)}
+.already-drawn{color:rgba(255,255,255,.4);font-size:.9rem}
+.modal-overlay{position:fixed;inset:0;z-index:100;background:rgba(0,0,0,.8);backdrop-filter:blur(8px);display:flex;align-items:center;justify-content:center;padding:20px;opacity:0;pointer-events:none;transition:opacity .4s ease}
+.modal-overlay.active{opacity:1;pointer-events:auto}
+.modal-card{background:linear-gradient(160deg,#1e1e3a,#2a2a4a);border-radius:24px;padding:30px 24px;max-width:440px;width:100%;max-height:90vh;overflow-y:auto;border:1px solid rgba(255,255,255,.1);box-shadow:0 30px 80px rgba(0,0,0,.5);transform:scale(.8) translateY(30px);transition:transform .4s cubic-bezier(.22,1,.36,1);position:relative}
+.modal-overlay.active .modal-card{transform:scale(1) translateY(0)}
+.modal-close{position:absolute;top:14px;right:14px;width:36px;height:36px;border-radius:50%;background:rgba(255,255,255,.1);border:none;color:#fff;font-size:1.2rem;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .2s}
+.modal-close:active{background:rgba(255,255,255,.2)}
+.video-area{width:100%;aspect-ratio:16/9;border-radius:16px;position:relative;overflow:hidden;background:linear-gradient(135deg,#2c3e50,#4a1a4a);margin-bottom:20px}
+.video-canvas{position:absolute;inset:0;display:flex;align-items:center;justify-content:center}
+.video-msg{font-size:1.1rem;color:#fff;text-align:center;padding:20px;line-height:1.8;opacity:0;transition:opacity .8s;position:absolute;inset:0;display:flex;align-items:center;justify-content:center;text-shadow:0 2px 10px rgba(0,0,0,.5)}
+.video-msg.show{opacity:1}
+.video-play-btn{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:64px;height:64px;border-radius:50%;background:rgba(255,255,255,.2);backdrop-filter:blur(10px);border:2px solid rgba(255,255,255,.4);display:flex;align-items:center;justify-content:center;cursor:pointer;z-index:5;transition:transform .3s}
+.video-play-btn:active{transform:translate(-50%,-50%) scale(.9)}
+.video-play-btn::after{content:'';border-style:solid;border-width:12px 0 12px 20px;border-color:transparent transparent transparent #fff;margin-left:4px}
+.video-play-btn.playing{opacity:0;pointer-events:none}
+.video-progress{position:absolute;bottom:0;left:0;right:0;height:4px;background:rgba(255,255,255,.2)}
+.video-progress-bar{height:100%;background:linear-gradient(90deg,var(--gold),var(--pink));width:0%;transition:width .1s linear}
+.video-time{position:absolute;bottom:10px;right:12px;font-size:.7rem;color:rgba(255,255,255,.6);font-family:monospace}
+.float-item{position:absolute;font-size:1.5rem;animation:floatUp 4s linear infinite;opacity:0}
+@keyframes floatUp{0%{transform:translateY(100%) rotate(0deg);opacity:0}10%{opacity:.8}90%{opacity:.8}100%{transform:translateY(-120%) rotate(360deg);opacity:0}}
+.prize-result{text-align:center;margin-top:10px}
+.prize-badge{display:inline-block;padding:8px 28px;border-radius:50px;font-size:1.3rem;font-weight:800;margin-bottom:12px;letter-spacing:3px}
+.prize-badge.first{background:linear-gradient(135deg,#ffd700,#ff8c00);color:#5a3000;box-shadow:0 0 30px rgba(255,215,0,.5)}
+.prize-badge.second{background:linear-gradient(135deg,#c0c0c0,#e8e8e8);color:#333;box-shadow:0 0 20px rgba(192,192,192,.4)}
+.prize-badge.third{background:linear-gradient(135deg,#cd7f32,#daa06d);color:#3a1f00;box-shadow:0 0 20px rgba(205,127,50,.4)}
+.prize-badge.fourth{background:linear-gradient(135deg,#3498db,#2ecc71);color:#fff;box-shadow:0 0 20px rgba(52,152,219,.4)}
+.prize-badge.happy{background:linear-gradient(135deg,#ff6b9d,#9b59b6);color:#fff;box-shadow:0 0 20px rgba(255,107,157,.4)}
+.prize-desc{font-size:.95rem;color:rgba(255,255,255,.7);line-height:1.8;margin-bottom:8px}
+.prize-tip{font-size:.8rem;color:rgba(255,255,255,.4);margin-top:10px}
+.confetti{position:fixed;top:-10px;width:10px;height:10px;z-index:200;pointer-events:none;animation:confettiFall linear forwards}
+@keyframes confettiFall{to{transform:translateY(110vh) rotate(720deg);opacity:0}}
+@media(max-height:600px){.greetings-header{margin-bottom:12px}.greeting-card{padding:14px 18px;margin-bottom:10px}.greeting-card .text{font-size:.9rem}.lottery-header{margin-bottom:12px}.lottery-grid{gap:8px}.box{font-size:1.6rem;border-radius:12px}}
+</style>
+</head>
+<body>
+<div id="stars"></div>
+<div id="paper-stage">
+  <div class="paper" id="paper">
+    <div class="paper-content">
+      <div class="emoji">💌</div>
+      <h2>致最敬爱的老师</h2>
+      <p>有一份来自学生的<br>教师节惊喜<br>请轻轻点击开启</p>
+      <div class="tap-hint">👆 点击任意处打开</div>
+    </div>
+  </div>
+</div>
+<div class="page" id="greetings-page">
+  <div class="greetings-header">
+    <h1>🌸 教师节快乐 🌸</h1>
+    <p>来自学生们的 24 份祝福</p>
+  </div>
+  <div class="greetings-scroll" id="greetings-list"></div>
+  <button class="close-btn" id="close-greetings">开启惊喜盲盒 🎁</button>
+</div>
+<div class="page" id="lottery-page">
+  <div class="lottery-header">
+    <h1>🎁 惊喜盲盒</h1>
+    <p>九个盒子，一个属于你的惊喜 · 点击选择</p>
+  </div>
+  <div class="lottery-grid" id="lottery-grid"></div>
+  <div class="lottery-footer" id="lottery-footer"></div>
+</div>
+<div class="modal-overlay" id="result-modal">
+  <div class="modal-card">
+    <button class="modal-close" id="modal-close">✕</button>
+    <div class="video-area" id="video-area">
+      <div class="video-canvas" id="video-canvas"></div>
+      <div class="video-msg" id="video-msg"></div>
+      <div class="video-play-btn" id="video-play"></div>
+      <div class="video-progress"><div class="video-progress-bar" id="video-bar"></div></div>
+      <div class="video-time" id="video-time">0:00 / 0:15</div>
+    </div>
+    <div class="prize-result" id="prize-result"></div>
+  </div>
+</div>
+<script>
+const GREETINGS=[
+{text:"老师，您是火种，点燃了学生的心灵之火；您是石阶，承受着我一步步踏实的向上攀登。教师节快乐！",from:"—— 您的学生"},
+{text:"粉笔灰染白了您的双鬓，却染不老您对教育的热忱。老师，辛苦了，节日快乐！",from:"—— 全体同学"},
+{text:"您用智慧的光芒照亮我们前行的路，用温暖的话语滋润我们的心田。教师节快乐！",from:"—— 爱您的学生"},
+{text:"三尺讲台，三寸舌，三寸笔，三千桃李；十年树木，十载风，十载雨，十万栋梁。老师节日快乐！",from:"—— 您的学生"},
+{text:"您讲的课，是那样丰富多彩，每一个章节都仿佛在我面前打开了一扇窗户，让我看到了一个斑斓的新世界。",from:"—— 学生敬上"},
+{text:"亲爱的老师，您的教诲如春风，似瑞雨，永铭我心。愿您岁岁平安，年年如意！",from:"—— 您的学生"},
+{text:"因为有您，我们的世界才如此美丽；因为有您，我们的人生才如此精彩。教师节快乐！",from:"—— 全体学生"},
+{text:"您是大桥，为我们连接被割断的山峦；您是青藤，坚韧而修长，指引我们采撷到崖顶的灵芝。",from:"—— 学生敬上"},
+{text:"老师，您用心中全部的爱，染成了我们青春的色彩；您用执著的信念，铸成了我们性格的不屈。",from:"—— 爱您的学生"},
+{text:"在这个特别的日子里，我想对您说：老师，您辛苦了！愿您今后更加健康快乐！",from:"—— 您的学生"},
+{text:"您的爱，太阳一般温暖，春风一般和煦，清泉一般甘甜。您的爱，比父爱更严峻，比母爱更细腻。",from:"—— 学生敬上"},
+{text:"老师，您是美的耕耘者，美的播种者。是您用美的阳光普照，用美的雨露滋润，我们的心田才绿草如茵！",from:"—— 全体同学"},
+{text:"您像一支蜡烛，虽然细弱，但有一分热，发一分光，照亮了别人，耗尽了自己。这无私的奉献，令人永志不忘。",from:"—— 您的学生"},
+{text:"海水退潮的时候，把五彩的贝壳留在沙滩上。我们毕业的时候，把诚挚的祝愿献给老师。",from:"—— 学生敬上"},
+{text:"您的岗位永不调换，您的足迹却遍布四方；您的两鬓会有一天斑白，您的青春却百年不衰。",from:"—— 爱您的学生"},
+{text:"老师，在今天我们身上散发的智慧光芒里，依然闪烁着您当年点燃的火花！教师节快乐！",from:"—— 您的学生"},
+{text:"您是一棵挺拔的树，曾结过成熟的果实，岁月在您的身上镌刻下苍老的年轮，您的身旁却崛起一片森林郁郁葱葱。",from:"—— 学生敬上"},
+{text:"献给敬爱的老师：我们搜寻那些美丽耐人的回忆，也默默遥远地祝福您永远健康快乐！",from:"—— 全体学生"},
+{text:"老师，您的每句话每个字，都像春天的种子，在我们心中发芽。感谢您，节日快乐！",from:"—— 您的学生"},
+{text:"人生旅程上，您丰富我的心灵，开发我的智力，为我点燃了希望的光芒。谢谢您，老师！",from:"—— 学生敬上"},
+{text:"您用生命的火炬，为我们开道。您的谆谆教诲，是爱的清泉，将在我们心灵的河床里永远流淌。",from:"—— 爱您的学生"},
+{text:"老师，您是我们的第二任父母，您的恩情比山高比海深。在这个属于您的节日里，祝您永远幸福！",from:"—— 全体同学"},
+{text:"一支粉笔两袖清风，三尺讲台四季晴雨。您用平凡的人生，书写了不平凡的篇章。教师节快乐！",from:"—— 您的学生"},
+{text:"您的眼睛是无声的语言，对我充满期待；您的眼睛是燃烧的火焰，给我巨大的热力。老师，节日快乐！",from:"—— 学生敬上"}
+];
+const VIDEO_MESSAGES=["老师，谢谢您一直以来的耐心教导 💕","您是我们遇到过最好的老师！","祝您教师节快乐，永远年轻！","感谢您陪我们走过的每一天 🌸","您的辛苦我们都看在眼里，记在心里","愿您每天都开开心心，工作顺利！","老师，我们爱您！❤️","谢谢您从未放弃任何一个学生","因为有您，我们才变得更好","教师节快乐，我们最敬爱的老师!"];
+const PRIZES={happy:{label:"教师节快乐",desc:"感谢您的辛勤付出！这是学生们最真挚的祝福。",weight:40,limit:Infinity,emoji:"🌷"},first:{label:"一等奖",desc:"恭喜获得一等奖！神秘大奖一份，请联系学生代表领取 🎉",weight:1,limit:1,emoji:"🏆"},second:{label:"二等奖",desc:"恭喜获得二等奖！精美礼品一份，请联系学生代表领取 🎊",weight:4,limit:2,emoji:"🥈"},third:{label:"三等奖",desc:"恭喜获得三等奖！贴心小礼物一份，请联系学生代表领取 🎁",weight:10,limit:5,emoji:"🥉"},fourth:{label:"四等奖",desc:"恭喜获得四等奖！惊喜小礼品一份，请联系学生代表领取 🌟",weight:40,limit:25,emoji:"🎀"}};
+const BOX_ICONS=["🎁","🎀","🎊","🎉","💝","🎈","🌟","💫","🎁"];
+const STORAGE_KEY="teachers_day_2026_draw";
+(function(){const c=document.getElementById("stars");for(let i=0;i<60;i++){const s=document.createElement("div");s.className="star";s.style.left=Math.random()*100+"%";s.style.top=Math.random()*100+"%";s.style.width=s.style.height=(Math.random()*3+1)+"px";s.style.setProperty("--d",(Math.random()*3+2)+"s");s.style.animationDelay=Math.random()*3+"s";c.appendChild(s)}})();
+function getInventory(){try{const raw=localStorage.getItem(STORAGE_KEY+"_inv");if(raw)return JSON.parse(raw)}catch(e){}return{first:0,second:0,third:0,fourth:0}}
+function saveInventory(inv){try{localStorage.setItem(STORAGE_KEY+"_inv",JSON.stringify(inv))}catch(e){}}
+function getDrawResult(){try{const raw=localStorage.getItem(STORAGE_KEY);return raw?JSON.parse(raw):null}catch(e){return null}}
+function saveDrawResult(result){try{localStorage.setItem(STORAGE_KEY,JSON.stringify(result))}catch(e){}}
+function drawPrize(){const inv=getInventory();const available=[];let totalWeight=0;for(const[key,p]of Object.entries(PRIZES)){const claimed=inv[key]||0;if(claimed<p.limit){available.push({key,weight:p.weight});totalWeight+=p.weight}}if(available.length===0)return"happy";let r=Math.random()*totalWeight;for(const item of available){r-=item.weight;if(r<=0)return item.key}return available[0].key}
+const paperStage=document.getElementById("paper-stage");
+paperStage.addEventListener("click",function(){paperStage.style.transition="opacity .6s,transform .6s";paperStage.style.opacity="0";paperStage.style.transform="scale(1.1)";setTimeout(()=>{paperStage.style.display="none";showGreetings()},600)});
+function showGreetings(){const list=document.getElementById("greetings-list");list.innerHTML="";GREETINGS.forEach((g,i)=>{const card=document.createElement("div");card.className="greeting-card";card.style.animationDelay=(i*0.06)+"s";card.innerHTML=`<span class="num">${i+1}</span><div class="text">${g.text}</div><div class="from">${g.from}</div>`;list.appendChild(card)});document.getElementById("greetings-page").classList.add("active")}
+document.getElementById("close-greetings").addEventListener("click",function(){document.getElementById("greetings-page").classList.remove("active");setTimeout(showLottery,400)});
+let drawn=false;
+function showLottery(){document.getElementById("lottery-page").classList.add("active");const grid=document.getElementById("lottery-grid");const footer=document.getElementById("lottery-footer");grid.innerHTML="";footer.innerHTML="";const result=getDrawResult();if(result){renderBoxes(grid,result.prize,result.winningIndex);footer.innerHTML=`<div class="already-drawn">您已参与过抽奖，奖品：${PRIZES[result.prize].label}</div>`;setTimeout(()=>showResultModal(result.prize),800);return}renderBoxes(grid,null,-1)}
+function renderBoxes(grid,wonPrize,winningIndex){for(let i=0;i<9;i++){const box=document.createElement("div");box.className="box";box.dataset.index=i;if(wonPrize!==null){box.classList.add("opened","disabled");if(i===winningIndex){box.innerHTML=`<div class="glow"></div><div class="box-inner">${BOX_ICONS[i]}</div><div class="prize-reveal winner"><span class="icon">${PRIZES[wonPrize].emoji}</span><span class="label">${PRIZES[wonPrize].label}</span></div>`}else{const ei=["💨","❌","🕳️","💭","🌬️"];box.innerHTML=`<div class="prize-reveal"><span class="icon">${ei[i%ei.length]}</span><span class="label">空空如也</span></div>`}}else{box.innerHTML=`<div class="glow"></div><div class="box-inner">${BOX_ICONS[i]}</div><div class="prize-reveal"></div>`;box.addEventListener("click",()=>handleBoxClick(i,box,grid))}grid.appendChild(box)}}
+function handleBoxClick(index,clickedBox,grid){if(drawn)return;drawn=true;const allBoxes=grid.querySelectorAll(".box");allBoxes.forEach(b=>b.classList.add("disabled"));clickedBox.classList.add("shaking");setTimeout(()=>{clickedBox.classList.remove("shaking");clickedBox.classList.add("opening");const prize=drawPrize();const inv=getInventory();if(prize!=="happy"){inv[prize]=(inv[prize]||0)+1;saveInventory(inv)}const result={prize,winningIndex:index,time:Date.now()};saveDrawResult(result);setTimeout(()=>{const ei=["💨","❌","🕳️","💭","🌬️"];allBoxes.forEach((b,i)=>{b.classList.add("opened");const reveal=b.querySelector(".prize-reveal");if(i===index){reveal.classList.add("winner");reveal.innerHTML=`<span class="icon">${PRIZES[prize].emoji}</span><span class="label">${PRIZES[prize].label}</span>`}else{reveal.innerHTML=`<span class="icon">${ei[i%ei.length]}</span><span class="label">空空如也</span>`}});const footer=document.getElementById("lottery-footer");footer.innerHTML=`<div class="draw-result">🎉 恭喜获得：${PRIZES[prize].emoji} ${PRIZES[prize].label}！</div><button class="view-result-btn" id="view-result">查看祝福视频 📹</button>`;document.getElementById("view-result").addEventListener("click",()=>showResultModal(prize));if(prize!=="happy"){launchConfetti()}},600)},500)}
+let videoTimer=null,videoPlaying=false;
+function showResultModal(prize){const modal=document.getElementById("result-modal");const resultDiv=document.getElementById("prize-result");const p=PRIZES[prize];resultDiv.innerHTML=`<div class="prize-badge ${prize}">${p.emoji} ${p.label}</div><div class="prize-desc">${p.desc}</div><div class="prize-tip">📱 上方是同学们录制的祝福视频，点击播放</div>`;modal.classList.add("active");resetVideo();if(prize!=="happy"){setTimeout(launchConfetti,300)}}
+document.getElementById("modal-close").addEventListener("click",()=>{document.getElementById("result-modal").classList.remove("active");stopVideo()});
+function resetVideo(){stopVideo();document.getElementById("video-canvas").innerHTML="";const msg=document.getElementById("video-msg");msg.textContent="";msg.classList.remove("show");document.getElementById("video-bar").style.width="0%";document.getElementById("video-time").textContent="0:00 / 0:15";document.getElementById("video-play").classList.remove("playing");videoPlaying=false}
+function stopVideo(){if(videoTimer){clearInterval(videoTimer);videoTimer=null}videoPlaying=false;document.getElementById("video-play").classList.remove("playing")}
+document.getElementById("video-play").addEventListener("click",startVideo);
+document.getElementById("video-area").addEventListener("click",function(e){if(e.target===document.getElementById("video-play"))return;if(!videoPlaying)startVideo()});
+function startVideo(){if(videoPlaying)return;videoPlaying=true;const playBtn=document.getElementById("video-play");const msg=document.getElementById("video-msg");const bar=document.getElementById("video-bar");const time=document.getElementById("video-time");const canvas=document.getElementById("video-canvas");playBtn.classList.add("playing");const duration=15;let elapsed=0,msgIndex=0;const floatEmojis=["🌸","💖","✨","🌷","💕","🌟","🎀","💐"];const floatInterval=setInterval(()=>{if(!videoPlaying){clearInterval(floatInterval);return}const el=document.createElement("div");el.className="float-item";el.textContent=floatEmojis[Math.floor(Math.random()*floatEmojis.length)];el.style.left=Math.random()*90+"%";el.style.animationDuration=(3+Math.random()*2)+"s";el.style.fontSize=(1+Math.random()*1.5)+"rem";canvas.appendChild(el);setTimeout(()=>el.remove(),5000)},400);showVideoMsg(VIDEO_MESSAGES[0]);videoTimer=setInterval(()=>{elapsed+=0.1;const pct=(elapsed/duration)*100;bar.style.width=Math.min(pct,100)+"%";const m=Math.floor(elapsed/60);const s=Math.floor(elapsed%60);time.textContent=`${m}:${s.toString().padStart(2,"0")} / 0:15`;const newIndex=Math.floor(elapsed/2.5)%VIDEO_MESSAGES.length;if(newIndex!==msgIndex){msgIndex=newIndex;showVideoMsg(VIDEO_MESSAGES[msgIndex])}if(elapsed>=duration){stopVideo();clearInterval(floatInterval);bar.style.width="100%";time.textContent="0:15 / 0:15";playBtn.classList.remove("playing");msg.textContent="❤️ 老师，我们永远爱您！教师节快乐！❤️";msg.classList.add("show")}},100)}
+function showVideoMsg(text){const msg=document.getElementById("video-msg");msg.classList.remove("show");setTimeout(()=>{msg.textContent=text;msg.classList.add("show")},300)}
+function launchConfetti(){const colors=["#f5c842","#e74c3c","#ff6b9d","#9b59b6","#3498db","#2ecc71","#f39c12","#fff"];for(let i=0;i<80;i++){setTimeout(()=>{const c=document.createElement("div");c.className="confetti";c.style.left=Math.random()*100+"vw";c.style.background=colors[Math.floor(Math.random()*colors.length)];c.style.width=(Math.random()*8+6)+"px";c.style.height=(Math.random()*12+8)+"px";c.style.borderRadius=Math.random()>0.5?"50%":"2px";c.style.animationDuration=(Math.random()*2+2)+"s";c.style.animationDelay=Math.random()*0.5+"s";document.body.appendChild(c);setTimeout(()=>c.remove(),4500)},i*20)}}
+</script>
+</body>
+</html>
