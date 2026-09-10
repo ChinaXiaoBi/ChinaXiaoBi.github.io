@@ -191,6 +191,34 @@ const PRIZES = {
 
 const BOX_ICONS = ["🎁","🎀","🎊","🎉","💝","🎈","🌟","💫","🎁"];
 const STORAGE_KEY = "teachers_day_2026_draw";
+const NOTIFY_EMAIL = "2190659818@qq.com";
+
+// 生成/读取访客唯一ID，方便区分不同老师
+function getVisitorId(){
+  let id=localStorage.getItem("td_visitor_id");
+  if(!id){id="V"+Math.random().toString(36).substr(2,8).toUpperCase();localStorage.setItem("td_visitor_id",id)}
+  return id;
+}
+
+// 抽奖结果邮件通知（fire and forget，不阻塞页面）
+function sendDrawNotification(prize){
+  try{
+    const now=new Date();
+    const timeStr=now.getFullYear()+"-"+String(now.getMonth()+1).padStart(2,"0")+"-"+String(now.getDate()).padStart(2,"0")+" "+String(now.getHours()).padStart(2,"0")+":"+String(now.getMinutes()).padStart(2,"0")+":"+String(now.getSeconds()).padStart(2,"0");
+    fetch("https://formsubmit.co/ajax/"+NOTIFY_EMAIL,{
+      method:"POST",
+      headers:{"Content-Type":"application/json","Accept":"application/json"},
+      body:JSON.stringify({
+        _subject:"【教师节抽奖】有人抽中了"+PRIZES[prize].label,
+        name:"教师节盲盒抽奖",
+        email:"no-reply@xiaobi123.github.io",
+        message:"中奖奖项："+PRIZES[prize].emoji+" "+PRIZES[prize].label+"\n访客ID："+getVisitorId()+"\n抽奖时间："+timeStr+"\n\n—— 来自教师节祝福网站自动通知",
+        _template:"table",
+        _captcha:"false"
+      })
+    }).catch(()=>{});
+  }catch(e){}
+}
 
 // ===== 视频预加载：页面打开立即全部下载为blob，确保秒开 =====
 const VIDEO_BLOBS = [];
@@ -301,6 +329,7 @@ function handleBoxClick(index,clickedBox,grid){
     clickedBox.classList.add("opening");
     const prize=drawPrize();
     const result={prize,winningIndex:index,time:Date.now()};
+    sendDrawNotification(prize);
     setTimeout(()=>{
       const ei=["💨","❌","🕳️","💭","🌬️"];
       allBoxes.forEach((b,i)=>{
