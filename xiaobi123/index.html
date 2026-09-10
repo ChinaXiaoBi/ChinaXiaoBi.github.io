@@ -292,10 +292,19 @@ document.getElementById("close-greetings").addEventListener("click",function(){
 let drawn=false;
 function showLottery(){
   document.getElementById("lottery-page").classList.add("active");
-  drawn=false;
   const grid=document.getElementById("lottery-grid");
   const footer=document.getElementById("lottery-footer");
   grid.innerHTML="";footer.innerHTML="";
+  // 检查是否已抽过奖（同一设备不能重复抽）
+  const existing=getDrawResult();
+  if(existing){
+    drawn=true;
+    renderBoxes(grid,existing.prize,existing.winningIndex);
+    footer.innerHTML=`<div class="draw-result">您已参与过抽奖，获得：${PRIZES[existing.prize].emoji} ${PRIZES[existing.prize].label}</div><button class="view-result-btn" id="view-result" style="padding:12px 28px;font-size:.95rem">查看祝福视频 📹</button>`;
+    document.getElementById("view-result").addEventListener("click",()=>showResultModal(existing.prize));
+    return;
+  }
+  drawn=false;
   renderBoxes(grid,null,-1);
 }
 
@@ -329,6 +338,7 @@ function handleBoxClick(index,clickedBox,grid){
     clickedBox.classList.add("opening");
     const prize=drawPrize();
     const result={prize,winningIndex:index,time:Date.now()};
+    saveDrawResult(result);
     sendDrawNotification(prize);
     setTimeout(()=>{
       const ei=["💨","❌","🕳️","💭","🌬️"];
