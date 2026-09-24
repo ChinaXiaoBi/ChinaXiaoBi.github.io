@@ -4,11 +4,10 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <title>体液免疫交互模型</title>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{width:100%;height:100%;overflow:hidden;font-family:-apple-system,BlinkMacSystemFont,'PingFang SC','Microsoft YaHei',sans-serif;background:#fff;color:#333}
-body{display:flex;flex-direction:column}
+body{display:flex;flex-direction:column;touch-action:manipulation}
 .header{background:linear-gradient(135deg,#2c5f2d,#4a8c4a);color:#fff;padding:5px 10px;text-align:center;flex-shrink:0}
 .header h1{font-size:0.95rem;font-weight:700}
 .header p{font-size:0.65rem;opacity:0.85;margin-top:1px}
@@ -19,8 +18,8 @@ body{display:flex;flex-direction:column}
 .pal-item .pic{width:28px;height:28px;flex-shrink:0;display:flex;align-items:center;justify-content:center}
 .pal-item.arrow-tool{border-color:#2980b9;background:#eaf2f8}
 .pal-item.arrow-tool.active{outline:3px solid #2980b9;background:#d4e6f1}
-.canvas{flex:1;position:relative;overflow:hidden;background:#fff;background-image:radial-gradient(circle,#dde5d5 1px,transparent 1px);background-size:18px 18px}
-.placed{position:absolute;cursor:grab;user-select:none;-webkit-user-select:none;display:flex;flex-direction:column;align-items:center;z-index:20;transform:translateX(-50%)}
+.canvas{flex:1;position:relative;overflow:hidden;background:#fff;background-image:radial-gradient(circle,#dde5d5 1px,transparent 1px);background-size:18px 18px;touch-action:none}
+.placed{position:absolute;cursor:grab;user-select:none;-webkit-user-select:none;display:flex;flex-direction:column;align-items:center;z-index:20;transform:translateX(-50%);will-change:left,top;touch-action:none}
 .placed.arrow-source{outline:3px solid #2980b9;outline-offset:2px;border-radius:10px;z-index:50}
 .placed .cell{width:46px;height:46px;display:flex;align-items:center;justify-content:center}
 .placed .name{font-size:0.62rem;background:rgba(255,255,255,0.95);padding:1px 5px;border-radius:4px;white-space:nowrap;margin-top:2px;border:1px solid #e0e0e0;font-weight:600;color:#444}
@@ -132,22 +131,17 @@ body{display:flex;flex-direction:column}
 </div>
 <script>
 var CELL_INFO = {
-  virus:{name:'诺如病毒',cls:'virus-body',color:'#e74c3c'},
-  apc:{name:'抗原呈递细胞',cls:'apc-body',color:'#27ae60'},
-  helperT:{name:'辅助性T细胞',cls:'helper-body',color:'#3498db'},
-  bcell:{name:'B细胞',cls:'bcell-body',color:'#f1c40f'},
-  plasma:{name:'浆细胞',cls:'plasma-body',color:'#9b59b6'},
-  memory:{name:'记忆B细胞',cls:'memory-body',color:'#e67e22'},
-  antibody:{name:'抗体',cls:'antibody-body',color:'#c0392b'}
+  virus:{name:'诺如病毒',cls:'virus-body'},
+  apc:{name:'抗原呈递细胞',cls:'apc-body'},
+  helperT:{name:'辅助性T细胞',cls:'helper-body'},
+  bcell:{name:'B细胞',cls:'bcell-body'},
+  plasma:{name:'浆细胞',cls:'plasma-body'},
+  memory:{name:'记忆B细胞',cls:'memory-body'},
+  antibody:{name:'抗体',cls:'antibody-body'}
 };
 var TARGETS = {
-  virus:{x:10,y:55},
-  apc:{x:27,y:55},
-  helperT:{x:44,y:22},
-  bcell:{x:60,y:58},
-  memory:{x:77,y:20},
-  plasma:{x:77,y:82},
-  antibody:{x:91,y:82}
+  virus:{x:10,y:55}, apc:{x:27,y:55}, helperT:{x:44,y:22},
+  bcell:{x:60,y:58}, memory:{x:77,y:20}, plasma:{x:77,y:82}, antibody:{x:91,y:82}
 };
 var HINTS = {
   virus:'病毒是免疫反应的起点，思考它和谁最先接触',
@@ -159,22 +153,17 @@ var HINTS = {
   antibody:'它能与抗原特异性结合，是谁产生的？'
 };
 var REQUIRED_ARROWS = [
-  {from:'virus',to:'apc'},
-  {from:'apc',to:'helperT'},
-  {from:'helperT',to:'bcell'},
-  {from:'bcell',to:'plasma'},
-  {from:'bcell',to:'memory'},
-  {from:'plasma',to:'antibody'}
+  {from:'virus',to:'apc'},{from:'apc',to:'helperT'},{from:'helperT',to:'bcell'},
+  {from:'bcell',to:'plasma'},{from:'bcell',to:'memory'},{from:'plasma',to:'antibody'}
 ];
 var elements = [];
 var arrows = [];
-var dragEl = null, dragOffset = {x:0,y:0};
-var delMode = false;
-var arrowMode = false;
-var arrowSource = null;
+var dragEl = null, dragOffsetX = 0, dragOffsetY = 0;
+var delMode = false, arrowMode = false, arrowSource = null;
 var eid = 0;
 var canvas = document.getElementById('canvas');
 var svg = document.getElementById('arrowSvg');
+var rafPending = false;
 function isPortrait(){ return window.innerHeight > window.innerWidth; }
 if(isPortrait()){
   setTimeout(function(){
@@ -188,50 +177,64 @@ function onPalClick(item){
   if(type) addElement(type, 35 + Math.random()*20, 30 + Math.random()*30);
 }
 function toggleArrowTool(){
-  arrowMode = !arrowMode;
-  arrowSource = null;
+  arrowMode = !arrowMode; arrowSource = null;
   var at = document.getElementById('arrowTool');
-  if(arrowMode){ at.className = 'pal-item arrow-tool active'; }
-  else { at.className = 'pal-item arrow-tool'; clearArrowSourceHighlight(); }
+  at.className = 'pal-item arrow-tool' + (arrowMode ? ' active' : '');
+  if(!arrowMode) clearArrowSourceHighlight();
 }
 function addElement(type, xPct, yPct){
   var info = CELL_INFO[type];
   var el = document.createElement('div');
   el.className = 'placed';
   el.innerHTML = '<div class="cell"><div class="' + info.cls + '"></div></div><div class="name">' + info.name + '</div>';
-  el.style.left = xPct + '%';
-  el.style.top = yPct + '%';
+  el.style.left = xPct + '%'; el.style.top = yPct + '%';
   canvas.appendChild(el);
-  var obj = {id: ++eid, type: type, el: el, x: xPct, y: yPct};
+  var obj = {id: ++eid, type: type, el: el, x: xPct, y: yPct, lineEl: null};
   elements.push(obj);
   makeDraggable(obj);
 }
 function getCenter(el){
   var rect = canvas.getBoundingClientRect();
-  var elRect = el.getBoundingClientRect();
-  return {x: elRect.left - rect.left + elRect.width/2, y: elRect.top - rect.top + elRect.height/2};
+  var r = el.getBoundingClientRect();
+  return {x: r.left - rect.left + r.width/2, y: r.top - rect.top + r.height/2};
+}
+function buildSvgDefs(){
+  svg.innerHTML = '<defs><marker id="ah" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto"><polygon points="0 0, 10 3.5, 0 7" fill="#2c5f2d"/></marker></defs>';
 }
 function drawArrows(){
-  var cw = canvas.offsetWidth;
-  var ch = canvas.offsetHeight;
-  svg.setAttribute('width', cw);
-  svg.setAttribute('height', ch);
-  svg.innerHTML = '<defs><marker id="ah" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto"><polygon points="0 0, 10 3.5, 0 7" fill="#2c5f2d"/></marker></defs>';
+  var cw = canvas.offsetWidth, ch = canvas.offsetHeight;
+  svg.setAttribute('width', cw); svg.setAttribute('height', ch);
+  buildSvgDefs();
   for(var i=0; i<arrows.length; i++){
-    var a = arrows[i];
-    var from = findById(a.fromId);
-    var to = findById(a.toId);
+    var from = findById(arrows[i].fromId);
+    var to = findById(arrows[i].toId);
     if(!from || !to) continue;
-    var p1 = getCenter(from.el);
-    var p2 = getCenter(to.el);
+    var p1 = getCenter(from.el), p2 = getCenter(to.el);
     var line = document.createElementNS('http://www.w3.org/2000/svg','line');
     line.setAttribute('x1', p1.x); line.setAttribute('y1', p1.y);
     line.setAttribute('x2', p2.x); line.setAttribute('y2', p2.y);
-    line.setAttribute('stroke', '#2c5f2d');
-    line.setAttribute('stroke-width', '2.5');
+    line.setAttribute('stroke', '#2c5f2d'); line.setAttribute('stroke-width', '2.5');
     line.setAttribute('marker-end', 'url(#ah)');
     svg.appendChild(line);
+    from.lineEl = line;
   }
+}
+function updateArrowsFast(){
+  if(rafPending) return;
+  rafPending = true;
+  requestAnimationFrame(function(){
+    rafPending = false;
+    for(var i=0; i<arrows.length; i++){
+      var from = findById(arrows[i].fromId);
+      var to = findById(arrows[i].toId);
+      if(!from || !to || !from.lineEl) continue;
+      var p1 = getCenter(from.el), p2 = getCenter(to.el);
+      from.lineEl.setAttribute('x1', p1.x);
+      from.lineEl.setAttribute('y1', p1.y);
+      from.lineEl.setAttribute('x2', p2.x);
+      from.lineEl.setAttribute('y2', p2.y);
+    }
+  });
 }
 function findById(id){
   for(var i=0; i<elements.length; i++){ if(elements[i].id === id) return elements[i]; }
@@ -242,69 +245,95 @@ function clearArrowSourceHighlight(){
 }
 function makeDraggable(obj){
   var el = obj.el;
-  el.addEventListener('pointerdown', function(e){
-    e.preventDefault();
-    e.stopPropagation();
-    if(delMode){
-      var na = [];
-      for(var i=0; i<arrows.length; i++){ if(arrows[i].fromId!==obj.id && arrows[i].toId!==obj.id) na.push(arrows[i]); }
-      arrows = na;
-      el.remove();
-      var ne = [];
-      for(var j=0; j<elements.length; j++){ if(elements[j].id!==obj.id) ne.push(elements[j]); }
-      elements = ne;
-      drawArrows();
-      return;
-    }
-    if(arrowMode){
-      if(!arrowSource){
-        arrowSource = obj;
-        el.classList.add('arrow-source');
-      } else if(arrowSource.id === obj.id){
-        el.classList.remove('arrow-source');
-        arrowSource = null;
-      } else {
-        arrows.push({fromId: arrowSource.id, toId: obj.id});
-        clearArrowSourceHighlight();
-        arrowSource = null;
-        drawArrows();
-      }
-      return;
-    }
+  el.addEventListener('touchstart', function(e){
+    if(e.touches.length > 1) return;
+    var t = e.touches[0];
+    if(delMode){ handleDelete(obj); return; }
+    if(arrowMode){ handleArrowClick(obj); return; }
     dragEl = obj;
     var rect = canvas.getBoundingClientRect();
-    var elRect = el.getBoundingClientRect();
-    dragOffset.x = e.clientX - elRect.left;
-    dragOffset.y = e.clientY - elRect.top;
-    try{ el.setPointerCapture(e.pointerId); }catch(err){}
+    var r = el.getBoundingClientRect();
+    dragOffsetX = t.clientX - r.left;
+    dragOffsetY = t.clientY - r.top;
     el.style.zIndex = 50;
-  });
-  el.addEventListener('pointermove', function(e){
+    e.preventDefault();
+  }, {passive:false});
+  el.addEventListener('touchmove', function(e){
     if(!dragEl || dragEl.id !== obj.id) return;
+    var t = e.touches[0];
     var rect = canvas.getBoundingClientRect();
-    var px = e.clientX - rect.left - dragOffset.x;
-    var py = e.clientY - rect.top - dragOffset.y;
+    var px = t.clientX - rect.left - dragOffsetX;
+    var py = t.clientY - rect.top - dragOffsetY;
     px = Math.max(20, Math.min(rect.width - 20, px));
     py = Math.max(20, Math.min(rect.height - 20, py));
     obj.x = px / rect.width * 100;
     obj.y = py / rect.height * 100;
     el.style.left = obj.x + '%';
     el.style.top = obj.y + '%';
-    drawArrows();
+    updateArrowsFast();
+    e.preventDefault();
+  }, {passive:false});
+  el.addEventListener('touchend', function(){
+    if(dragEl){ dragEl.el.style.zIndex=20; dragEl=null; }
   });
-  function endDrag(){ if(dragEl){ dragEl.el.style.zIndex=20; dragEl=null; } }
-  el.addEventListener('pointerup', endDrag);
-  el.addEventListener('pointercancel', endDrag);
+  el.addEventListener('mousedown', function(e){
+    e.preventDefault();
+    if(delMode){ handleDelete(obj); return; }
+    if(arrowMode){ handleArrowClick(obj); return; }
+    dragEl = obj;
+    var rect = canvas.getBoundingClientRect();
+    var r = el.getBoundingClientRect();
+    dragOffsetX = e.clientX - r.left;
+    dragOffsetY = e.clientY - r.top;
+    el.style.zIndex = 50;
+  });
+  el.addEventListener('mousemove', function(e){
+    if(!dragEl || dragEl.id !== obj.id) return;
+    var rect = canvas.getBoundingClientRect();
+    var px = e.clientX - rect.left - dragOffsetX;
+    var py = e.clientY - rect.top - dragOffsetY;
+    px = Math.max(20, Math.min(rect.width - 20, px));
+    py = Math.max(20, Math.min(rect.height - 20, py));
+    obj.x = px / rect.width * 100;
+    obj.y = py / rect.height * 100;
+    el.style.left = obj.x + '%';
+    el.style.top = obj.y + '%';
+    updateArrowsFast();
+  });
+  el.addEventListener('mouseup', function(){
+    if(dragEl){ dragEl.el.style.zIndex=20; dragEl=null; }
+  });
+}
+function handleDelete(obj){
+  var na = [];
+  for(var i=0; i<arrows.length; i++){ if(arrows[i].fromId!==obj.id && arrows[i].toId!==obj.id) na.push(arrows[i]); }
+  arrows = na;
+  obj.el.remove();
+  var ne = [];
+  for(var j=0; j<elements.length; j++){ if(elements[j].id!==obj.id) ne.push(elements[j]); }
+  elements = ne;
+  drawArrows();
+}
+function handleArrowClick(obj){
+  if(!arrowSource){
+    arrowSource = obj;
+    obj.el.classList.add('arrow-source');
+  } else if(arrowSource.id === obj.id){
+    obj.el.classList.remove('arrow-source');
+    arrowSource = null;
+  } else {
+    arrows.push({fromId: arrowSource.id, toId: obj.id});
+    clearArrowSourceHighlight();
+    arrowSource = null;
+    drawArrows();
+  }
 }
 function toggleDel(){
-  delMode = !delMode;
-  arrowMode = false;
-  clearArrowSourceHighlight();
-  var at = document.getElementById('arrowTool');
-  at.className = 'pal-item arrow-tool';
+  delMode = !delMode; arrowMode = false; clearArrowSourceHighlight();
+  document.getElementById('arrowTool').className = 'pal-item arrow-tool';
   var btn = document.getElementById('btnDel');
-  if(delMode){ btn.className = 'btn-del active'; btn.textContent = '✅ 退出删除'; }
-  else { btn.className = 'btn-del'; btn.textContent = '🗑 删除'; }
+  if(delMode){ btn.className='btn-del active'; btn.textContent='✅ 退出删除'; }
+  else { btn.className='btn-del'; btn.textContent='🗑 删除'; }
 }
 function resetAll(){
   for(var i=0; i<elements.length; i++) elements[i].el.remove();
@@ -320,75 +349,55 @@ function showTips(){
     if(!existing){
       var el = document.createElement('div');
       el.className = 'zone-label';
-      el.style.left = TARGETS[type].x + '%';
-      el.style.top = TARGETS[type].y + '%';
+      el.style.left = TARGETS[type].x + '%'; el.style.top = TARGETS[type].y + '%';
       el.textContent = '📍' + CELL_INFO[type].name;
-      el.id = 'tip-' + type;
       canvas.appendChild(el);
-      (function(tid){ setTimeout(function(){ var t2=document.getElementById(tid); if(t2) t2.remove(); }, 3000); })(el.id);
+      (function(e){ setTimeout(function(){ e.remove(); }, 3000); })(el);
     }
   }
 }
 function checkModel(){
-  var results = [];
-  var allOk = true;
+  var results = [], allOk = true;
   var keys = Object.keys(TARGETS);
   for(var i=0; i<keys.length; i++){
-    var type = keys[i];
-    var placed = [];
+    var type = keys[i], placed = [];
     for(var j=0; j<elements.length; j++){ if(elements[j].type===type) placed.push(elements[j]); }
     if(placed.length === 0){
-      results.push('❌ 缺少【' + CELL_INFO[type].name + '】');
-      allOk = false;
-      continue;
+      results.push('❌ 缺少【' + CELL_INFO[type].name + '】'); allOk = false; continue;
     }
     var o = placed[0];
-    var dx = Math.abs(o.x - TARGETS[type].x);
-    var dy = Math.abs(o.y - TARGETS[type].y);
-    if(dx <= 15 && dy <= 18){
-      results.push('✅ ' + CELL_INFO[type].name + '位置正确');
-    } else {
-      results.push('🤔 ' + CELL_INFO[type].name + '的位置再想想——' + HINTS[type]);
-      allOk = false;
-    }
+    var dx = Math.abs(o.x - TARGETS[type].x), dy = Math.abs(o.y - TARGETS[type].y);
+    if(dx <= 15 && dy <= 18){ results.push('✅ ' + CELL_INFO[type].name + '位置正确'); }
+    else { results.push('🤔 ' + CELL_INFO[type].name + '的位置再想想——' + HINTS[type]); allOk = false; }
   }
   var byType = {};
   for(var k=0; k<elements.length; k++){ if(!byType[elements[k].type]) byType[elements[k].type] = elements[k]; }
   for(var m=0; m<REQUIRED_ARROWS.length; m++){
     var ra = REQUIRED_ARROWS[m];
-    var fromEl = byType[ra.from];
-    var toEl = byType[ra.to];
+    var fromEl = byType[ra.from], toEl = byType[ra.to];
     if(!fromEl || !toEl) continue;
     var hasArrow = false;
     for(var n=0; n<arrows.length; n++){
       if(arrows[n].fromId===fromEl.id && arrows[n].toId===toEl.id){ hasArrow=true; break; }
     }
-    if(!hasArrow){
-      results.push('↗️ ' + CELL_INFO[ra.from].name + '和' + CELL_INFO[ra.to].name + '之间需要箭头');
-      allOk = false;
-    } else {
-      results.push('✅ 箭头 ' + CELL_INFO[ra.from].name + '→' + CELL_INFO[ra.to].name);
-    }
+    if(!hasArrow){ results.push('↗️ ' + CELL_INFO[ra.from].name + '和' + CELL_INFO[ra.to].name + '之间需要箭头'); allOk = false; }
+    else { results.push('✅ 箭头 ' + CELL_INFO[ra.from].name + '→' + CELL_INFO[ra.to].name); }
   }
   showFb(allOk, results);
   return allOk;
 }
 function showFb(ok, results){
   var fb = document.getElementById('feedback');
-  var title = document.getElementById('fbTitle');
+  document.getElementById('fbTitle').innerHTML = ok ? '🎉 恭喜！完全正确！' : '📋 检查结果';
   var list = document.getElementById('fbList');
   fb.className = 'feedback show' + (ok ? ' ok' : '');
-  title.innerHTML = ok ? '🎉 恭喜！完全正确！' : '📋 检查结果';
   list.innerHTML = '';
   for(var i=0; i<results.length; i++){
-    var li = document.createElement('li');
-    li.textContent = results[i];
-    list.appendChild(li);
+    var li = document.createElement('li'); li.textContent = results[i]; list.appendChild(li);
   }
   if(ok){
     var tip = document.createElement('li');
-    tip.style.marginTop='6px';
-    tip.style.color='#2c5f2d';
+    tip.style.marginTop='6px'; tip.style.color='#2c5f2d';
     tip.textContent = '流程：诺如病毒→抗原呈递细胞→辅助性T细胞→B细胞→浆细胞+记忆B细胞→抗体';
     list.appendChild(tip);
   }
@@ -399,45 +408,51 @@ function showSubmitModal(){
   setTimeout(function(){ document.getElementById('studentName').focus(); }, 100);
 }
 function closeSubmitModal(){ document.getElementById('submitModal').className='submit-modal'; }
+function loadScript(src, cb){
+  var s = document.createElement('script');
+  s.src = src; s.onload = cb;
+  document.head.appendChild(s);
+}
 function doSubmit(){
   var name = document.getElementById('studentName').value.trim();
   if(!name){ alert('请输入你的姓名'); return; }
   var passed = checkModel();
   var btn = document.getElementById('sendBtn');
-  btn.textContent = '截图中...';
-  btn.disabled = true;
+  btn.textContent = '截图中...'; btn.disabled = true;
   hideFb();
-  html2canvas(canvas, {backgroundColor:'#ffffff', scale:2, useCORS:true, logging:false}).then(function(canvasImg){
-    btn.textContent = '发送中...';
-    canvasImg.toBlob(function(blob){
-      var fd = new FormData();
-      fd.append('name', name);
-      fd.append('_subject', '【生物作业】' + name + '的体液免疫模型' + (passed ? ' ✅正确' : ' ❌有误'));
-      fd.append('result', passed ? '✅ 完全正确' : '❌ 有错误，详见截图');
-      fd.append('message', '学生：' + name + '\n结果：' + (passed ? '完全正确' : '有错误') + '\n细胞数：' + elements.length + '\n箭头数：' + arrows.length);
-      fd.append('attachment', blob, name + '_体液免疫模型.png');
-      var xhr = new XMLHttpRequest();
-      xhr.open('POST', 'https://formsubmit.co/ajax/2507166891@qq.com', true);
-      xhr.onload = function(){
-        closeSubmitModal();
-        var box = document.getElementById('submitBox');
-        box.innerHTML = '<div class="submit-ok"><div class="big">✅</div><h3>提交成功！</h3><p style="font-size:0.85rem;color:#666;margin-top:8px">' + name + '，你的模型截图已发送给老师</p></div>';
-        setTimeout(function(){
-          box.innerHTML = '<h3>📤 提交你的答案</h3><p style="font-size:0.8rem;color:#888;margin-bottom:12px">提交后老师会收到你的模型截图</p><input type="text" id="studentName" placeholder="输入你的姓名" maxlength="20"><div class="btn-row"><button class="btn-cancel" onclick="closeSubmitModal()">取消</button><button class="btn-send" id="sendBtn" onclick="doSubmit()">提交</button></div>';
-        }, 2500);
-      };
-      xhr.onerror = function(){
-        btn.textContent = '提交';
-        btn.disabled = false;
-        alert('网络错误，请重试');
-      };
-      xhr.send(fd);
-    }, 'image/png');
-  }).catch(function(err){
-    btn.textContent = '提交';
-    btn.disabled = false;
-    alert('截图失败，请重试');
-  });
+  function proceed(){
+    html2canvas(canvas, {backgroundColor:'#ffffff', scale:2, useCORS:true, logging:false}).then(function(canvasImg){
+      btn.textContent = '发送中...';
+      canvasImg.toBlob(function(blob){
+        var fd = new FormData();
+        fd.append('name', name);
+        fd.append('_subject', '【生物作业】' + name + '的体液免疫模型' + (passed ? ' ✅正确' : ' ❌有误'));
+        fd.append('message', '学生：' + name + '\n结果：' + (passed ? '完全正确' : '有错误') + '\n细胞数：' + elements.length + '\n箭头数：' + arrows.length);
+        fd.append('attachment', blob, name + '_model.png');
+        var xhr = new XMLHttpRequest();
+        xhr.open('POST', 'https://formsubmit.co/ajax/2507166891@qq.com', true);
+        xhr.onload = function(){
+          closeSubmitModal();
+          var box = document.getElementById('submitBox');
+          box.innerHTML = '<div class="submit-ok"><div class="big">✅</div><h3>提交成功！</h3><p style="font-size:0.85rem;color:#666;margin-top:8px">' + name + '，模型截图已发送</p></div>';
+          setTimeout(function(){
+            box.innerHTML = '<h3>📤 提交你的答案</h3><p style="font-size:0.8rem;color:#888;margin-bottom:12px">提交后老师会收到你的模型截图</p><input type="text" id="studentName" placeholder="输入你的姓名" maxlength="20"><div class="btn-row"><button class="btn-cancel" onclick="closeSubmitModal()">取消</button><button class="btn-send" id="sendBtn" onclick="doSubmit()">提交</button></div>';
+          }, 2500);
+        };
+        xhr.onerror = function(){
+          btn.textContent = '提交'; btn.disabled = false;
+          alert('网络错误，请重试');
+        };
+        xhr.send(fd);
+      }, 'image/png');
+    }).catch(function(){
+      btn.textContent = '提交'; btn.disabled = false;
+      alert('截图失败，请重试');
+    });
+  }
+  if(typeof html2canvas === 'undefined'){
+    loadScript('https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js', proceed);
+  } else { proceed(); }
 }
 window.addEventListener('resize', function(){ drawArrows(); });
 window.addEventListener('orientationchange', function(){ setTimeout(drawArrows, 300); });
