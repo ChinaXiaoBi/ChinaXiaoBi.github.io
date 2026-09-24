@@ -11,6 +11,7 @@ html,body{width:100%;height:100%;overflow:hidden;font-family:-apple-system,Blink
 .header h1{font-size:1rem;font-weight:700}
 .header p{font-size:0.68rem;opacity:0.85;margin-top:1px}
 .main{flex:1;display:flex;overflow:hidden;position:relative}
+/* 素材栏：横向顶部（竖屏时） / 左侧（横屏时） */
 .palette{background:#f7f9f4;border-right:2px solid #d8e0d0;padding:6px;overflow-x:auto;overflow-y:hidden;flex-shrink:0;z-index:5;display:flex;flex-direction:row;gap:6px;align-items:flex-start;width:auto}
 .palette h3{display:none}
 .pal-item{display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 8px;background:#fff;border:2px solid #d0d8c8;border-radius:8px;cursor:grab;touch-action:none;user-select:none;-webkit-user-select:none;font-size:0.62rem;transition:transform .1s,box-shadow .1s;min-width:62px;flex-shrink:0;text-align:center}
@@ -18,6 +19,7 @@ html,body{width:100%;height:100%;overflow:hidden;font-family:-apple-system,Blink
 .pal-item:hover{border-color:#4a8c4a;box-shadow:0 2px 8px rgba(74,140,74,0.2)}
 .pal-item .pic{width:30px;height:30px;flex-shrink:0;display:flex;align-items:center;justify-content:center}
 .pal-item.arrow-tool{border-color:#2980b9;background:#eaf2f8}
+/* 横屏时素材栏在左侧竖向排列 */
 @media(min-width:600px) and (orientation:landscape){
   .palette{flex-direction:column;width:130px;overflow-y:auto;overflow-x:hidden;padding:8px}
   .palette h3{display:block;font-size:0.7rem;color:#777;margin-bottom:6px;text-align:center;letter-spacing:1px;width:100%}
@@ -27,8 +29,10 @@ html,body{width:100%;height:100%;overflow:hidden;font-family:-apple-system,Blink
 .placed{position:absolute;cursor:grab;touch-action:none;user-select:none;-webkit-user-select:none;display:flex;flex-direction:column;align-items:center;z-index:20;transition:filter .2s}
 .placed:active{cursor:grabbing;z-index:50}
 .placed.arrow-source{outline:3px solid #2980b9;outline-offset:2px;border-radius:10px;z-index:50}
+.place.arrow-target{outline:3px dashed #e74c3c;outline-offset:2px}
 .placed .cell{width:54px;height:54px;display:flex;align-items:center;justify-content:center;position:relative}
 .placed .name{font-size:0.68rem;background:rgba(255,255,255,0.92);padding:2px 6px;border-radius:4px;white-space:nowrap;margin-top:3px;border:1px solid #e0e0e0;font-weight:600;color:#444}
+/* cell illustrations */
 .virus-body{width:40px;height:40px;background:#e74c3c;border-radius:50%;position:relative;border:2px solid #c0392b}
 .virus-body::before{content:'';position:absolute;inset:-6px;background:repeating-conic-gradient(from 0deg,#e74c3c 0deg 12deg,transparent 12deg 30deg);border-radius:50%;z-index:-1}
 .virus-body::after{content:'';position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:16px;height:16px;background:#c0392b;border-radius:50%}
@@ -49,6 +53,7 @@ html,body{width:100%;height:100%;overflow:hidden;font-family:-apple-system,Blink
 .controls button{padding:8px 16px;border:none;border-radius:18px;font-size:0.82rem;cursor:pointer;font-weight:600;transition:transform .1s}
 .controls button:active{transform:scale(0.95)}
 .btn-check{background:#2c5f2d;color:#fff}
+.btn-demo{background:#8e44ad;color:#fff}
 .btn-reset{background:#95a5a6;color:#fff}
 .btn-tip{background:#2980b9;color:#fff}
 .btn-del{background:#e74c3c;color:#fff}
@@ -62,6 +67,7 @@ html,body{width:100%;height:100%;overflow:hidden;font-family:-apple-system,Blink
 .feedback .close-fb{float:right;cursor:pointer;font-size:1.1rem;color:#999;padding:0 4px}
 .feedback .close-fb:hover{color:#333}
 .zone-label{position:absolute;font-size:0.65rem;color:#bbb;pointer-events:none;z-index:1}
+/* 竖屏横屏提示 */
 .rotate-hint{display:none;position:fixed;inset:0;background:rgba(44,95,45,0.97);z-index:999;align-items:center;justify-content:center;flex-direction:column;color:#fff;text-align:center;padding:20px}
 .rotate-hint.show{display:flex}
 .rotate-hint .phone-icon{font-size:60px;animation:rotatePhone 1.5s ease infinite;margin-bottom:20px}
@@ -89,6 +95,7 @@ html,body{width:100%;height:100%;overflow:hidden;font-family:-apple-system,Blink
   <p>横屏后画布更大，便于拖拽搭建模型<br>教室大屏使用无需旋转</p>
   <button class="continue" onclick="document.getElementById('rotateHint').classList.remove('show')">继续竖屏使用</button>
 </div>
+
 <div class="header">
   <h1>🧬 体液免疫交互模型</h1>
   <p>高中生物选择性必修1 · 从左侧拖入细胞，搭建体液免疫过程</p>
@@ -118,6 +125,7 @@ html,body{width:100%;height:100%;overflow:hidden;font-family:-apple-system,Blink
   <button class="btn-tip" id="btnTip">💡 提示</button>
   <button class="btn-del" id="btnDel">🗑 删除模式</button>
   <button class="btn-reset" id="btnReset">🔄 重置</button>
+  <button class="btn-demo" id="btnDemo">📺 演示答案</button>
   <button class="btn-check" id="btnCheck">✅ 检查模型</button>
 </div>
 <script>
@@ -139,6 +147,7 @@ const TARGETS = {
   plasma:{x:78,y:75,hint:'B细胞增殖分化出浆细胞，在右下方'},
   antibody:{x:93,y:75,hint:'浆细胞分泌抗体，在浆细胞右侧'}
 };
+// 正确箭头连线
 const REQUIRED_ARROWS = [
   {from:'virus',to:'apc',hint:'诺如病毒→抗原呈递细胞'},
   {from:'apc',to:'helperT',hint:'抗原呈递细胞→辅助性T细胞'},
@@ -148,7 +157,7 @@ const REQUIRED_ARROWS = [
   {from:'plasma',to:'antibody',hint:'浆细胞→抗体'}
 ];
 let elements = [];
-let arrows = [];
+let arrows = []; // {fromId, toId}
 let dragEl = null, dragOffset = {x:0,y:0};
 let delMode = false;
 let arrowMode = false;
@@ -156,23 +165,30 @@ let arrowSource = null;
 let eid = 0;
 const canvas = document.getElementById('canvas');
 const svg = document.getElementById('arrowSvg');
+
+// 竖屏提示
 if(window.innerWidth < 600 && window.matchMedia('(orientation: portrait)').matches){
   setTimeout(()=>document.getElementById('rotateHint').classList.add('show'),800);
 }
+
+// palette tap to add — use click for reliable mobile tap
 document.querySelectorAll('.pal-item[data-type]').forEach(item=>{
-  item.addEventListener('pointerdown',e=>{
+  item.addEventListener('click',e=>{
     e.preventDefault();
     const type = item.dataset.type;
     addElement(type, 45, 45);
   });
 });
-document.getElementById('arrowTool').addEventListener('pointerdown',e=>{
+
+// arrow tool
+document.getElementById('arrowTool').addEventListener('click',e=>{
   e.preventDefault();
   arrowMode = !arrowMode;
   arrowSource = null;
   document.getElementById('arrowTool').style.outline = arrowMode ? '3px solid #2980b9' : 'none';
   if(!arrowMode) clearArrowSourceHighlight();
 });
+
 function addElement(type,xPct,yPct){
   const info = CELL_INFO[type];
   const el = document.createElement('div');
@@ -185,11 +201,16 @@ function addElement(type,xPct,yPct){
   elements.push(obj);
   makeDraggable(obj);
 }
+
 function getCenter(el){
   const rect = canvas.getBoundingClientRect();
   const elRect = el.getBoundingClientRect();
-  return {x: elRect.left - rect.left + elRect.width/2, y: elRect.top - rect.top + elRect.height/2};
+  return {
+    x: elRect.left - rect.left + elRect.width/2,
+    y: elRect.top - rect.top + elRect.height/2
+  };
 }
+
 function drawArrows(){
   svg.innerHTML = '<defs><marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto"><polygon points="0 0, 10 3.5, 0 7" fill="#2c5f2d"/></marker></defs>';
   arrows.forEach(a=>{
@@ -203,24 +224,30 @@ function drawArrows(){
     line.setAttribute('x2',p2.x);line.setAttribute('y2',p2.y);
     line.setAttribute('stroke','#2c5f2d');line.setAttribute('stroke-width','2.5');
     line.setAttribute('marker-end','url(#arrowhead)');
+    line.setAttribute('stroke-dasharray','none');
     svg.appendChild(line);
   });
 }
+
 function clearArrowSourceHighlight(){
   elements.forEach(e=>e.el.classList.remove('arrow-source'));
 }
+
 function makeDraggable(obj){
   const el = obj.el;
   el.addEventListener('pointerdown',e=>{
     e.preventDefault();
     e.stopPropagation();
+    // 删除模式
     if(delMode){
+      // 删除与此元素相连的箭头
       arrows = arrows.filter(a=>a.fromId!==obj.id && a.toId!==obj.id);
       el.remove();
       elements = elements.filter(x=>x.id!==obj.id);
       drawArrows();
       return;
     }
+    // 箭头模式
     if(arrowMode){
       if(!arrowSource){
         arrowSource = obj;
@@ -264,6 +291,7 @@ function makeDraggable(obj){
     if(dragEl){dragEl.el.style.zIndex=20;dragEl=null;}
   });
 }
+
 document.getElementById('btnDel').addEventListener('click',function(){
   delMode = !delMode;
   arrowMode = false;
@@ -271,6 +299,7 @@ document.getElementById('btnDel').addEventListener('click',function(){
   this.classList.toggle('active',delMode);
   this.textContent = delMode ? '✅ 退出删除' : '🗑 删除模式';
 });
+
 document.getElementById('btnReset').addEventListener('click',()=>{
   elements.forEach(o=>o.el.remove());
   elements = [];
@@ -278,6 +307,25 @@ document.getElementById('btnReset').addEventListener('click',()=>{
   drawArrows();
   hideFb();
 });
+
+document.getElementById('btnDemo').addEventListener('click',()=>{
+  elements.forEach(o=>o.el.remove());
+  elements = [];
+  arrows = [];
+  // place each cell at its target
+  const placedByType = {};
+  for(const[type,t]of Object.entries(TARGETS)){
+    addElement(type, t.x, t.y);
+    placedByType[type] = elements[elements.length-1];
+  }
+  // draw all required arrows
+  REQUIRED_ARROWS.forEach(ra=>{
+    arrows.push({fromId:placedByType[ra.from].id, toId:placedByType[ra.to].id});
+  });
+  setTimeout(drawArrows, 50);
+  hideFb();
+});
+
 document.getElementById('btnTip').addEventListener('click',()=>{
   for(const[type,t]of Object.entries(TARGETS)){
     const existing = elements.find(o=>o.type===type);
@@ -294,10 +342,13 @@ document.getElementById('btnTip').addEventListener('click',()=>{
     }
   }
 });
+
 document.getElementById('btnCheck').addEventListener('click',checkModel);
+
 function checkModel(){
   const results = [];
   let allOk = true;
+  // 检查位置
   for(const[type,t]of Object.entries(TARGETS)){
     const placed = elements.filter(o=>o.type===type);
     if(placed.length===0){
@@ -315,12 +366,13 @@ function checkModel(){
       allOk = false;
     }
   }
+  // 检查箭头
   const byType = {};
   elements.forEach(o=>{if(!byType[o.type])byType[o.type]=o});
   REQUIRED_ARROWS.forEach(ra=>{
     const fromEl = byType[ra.from];
     const toEl = byType[ra.to];
-    if(!fromEl||!toEl)return;
+    if(!fromEl||!toEl)return; // 细胞还没放，跳过
     const hasArrow = arrows.some(a=>a.fromId===fromEl.id && a.toId===toEl.id);
     if(!hasArrow){
       results.push({msg:`➡️ 缺少箭头：${ra.hint}`});
@@ -331,6 +383,7 @@ function checkModel(){
   });
   showFb(allOk, results);
 }
+
 function showFb(ok, results){
   const fb = document.getElementById('feedback');
   const title = document.getElementById('fbTitle');
