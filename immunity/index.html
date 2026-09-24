@@ -19,7 +19,7 @@ body{display:flex;flex-direction:column}
 .pal-item.arrow-tool{border-color:#2980b9;background:#eaf2f8}
 .pal-item.arrow-tool.active{outline:3px solid #2980b9;background:#d4e6f1}
 .canvas{flex:1;position:relative;overflow:hidden;background:#fff;background-image:radial-gradient(circle,#dde5d5 1px,transparent 1px);background-size:18px 18px}
-.placed{position:absolute;cursor:grab;user-select:none;-webkit-user-select:none;display:flex;flex-direction:column;align-items:center;z-index:20}
+.placed{position:absolute;cursor:grab;user-select:none;-webkit-user-select:none;display:flex;flex-direction:column;align-items:center;z-index:20;transform:translateX(-50%)}
 .placed.arrow-source{outline:3px solid #2980b9;outline-offset:2px;border-radius:10px;z-index:50}
 .placed .cell{width:46px;height:46px;display:flex;align-items:center;justify-content:center}
 .placed .name{font-size:0.62rem;background:rgba(255,255,255,0.95);padding:1px 5px;border-radius:4px;white-space:nowrap;margin-top:2px;border:1px solid #e0e0e0;font-weight:600;color:#444}
@@ -48,6 +48,7 @@ body{display:flex;flex-direction:column}
 .btn-tip{background:#2980b9;color:#fff}
 .btn-del{background:#e74c3c;color:#fff}
 .btn-del.active{background:#c0392b;box-shadow:0 0 0 2px rgba(231,76,60,0.3)}
+.btn-submit{background:#e67e22;color:#fff}
 .feedback{position:absolute;top:8px;left:50%;transform:translateX(-50%);background:#fff8e1;border:2px solid #ffc107;border-radius:10px;padding:10px 14px;max-width:94%;width:340px;z-index:100;display:none;box-shadow:0 4px 20px rgba(0,0,0,0.15)}
 .feedback.show{display:block}
 .feedback.ok{background:#e8f5e9;border-color:#4caf50}
@@ -58,6 +59,18 @@ body{display:flex;flex-direction:column}
 .rotate-tip{position:fixed;bottom:60px;left:50%;transform:translateX(-50%);background:rgba(44,95,45,0.9);color:#fff;padding:6px 14px;border-radius:16px;font-size:0.72rem;z-index:99;display:none}
 .rotate-tip.show{display:block;animation:fadeIn 0.5s}
 @keyframes fadeIn{from{opacity:0}to{opacity:1}}
+.submit-modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:200;align-items:center;justify-content:center}
+.submit-modal.show{display:flex}
+.submit-box{background:#fff;border-radius:14px;padding:20px;width:90%;max-width:340px;text-align:center}
+.submit-box h3{font-size:1.1rem;margin-bottom:12px;color:#2c5f2d}
+.submit-box input{width:100%;padding:10px 12px;border:2px solid #d0d8c8;border-radius:8px;font-size:1rem;margin-bottom:12px;outline:none}
+.submit-box input:focus{border-color:#4a8c4a}
+.submit-box .btn-row{display:flex;gap:8px;justify-content:center}
+.submit-box .btn-row button{padding:8px 20px;border:none;border-radius:18px;font-size:0.9rem;font-weight:600;cursor:pointer}
+.submit-box .btn-cancel{background:#eee;color:#666}
+.submit-box .btn-send{background:#e67e22;color:#fff}
+.submit-ok{text-align:center;padding:20px}
+.submit-ok .big{font-size:48px;margin-bottom:10px}
 @media(min-width:500px) and (orientation:landscape){
   .main{flex-direction:row}
   .palette{flex-direction:column;width:120px;overflow-y:auto;overflow-x:hidden;border-right:2px solid #d8e0d0;border-bottom:none;padding:8px;align-items:stretch}
@@ -75,7 +88,7 @@ body{display:flex;flex-direction:column}
 <body>
 <div class="header">
   <h1>🧬 体液免疫交互模型</h1>
-  <p>高中生物选必1 · 点素材添加 → 拖动摆放 → 点箭头连线 → 检查</p>
+  <p>高中生物选必1 · 点素材添加 → 拖动摆放 → 点箭头连线 → 提交</p>
 </div>
 <div class="main">
   <div class="palette" id="palette">
@@ -102,9 +115,21 @@ body{display:flex;flex-direction:column}
   <button class="btn-del" id="btnDel" onclick="toggleDel()">🗑 删除</button>
   <button class="btn-reset" onclick="resetAll()">🔄 重置</button>
   <button class="btn-demo" onclick="demoAnswer()">📺 演示答案</button>
-  <button class="btn-check" onclick="checkModel()">✅ 检查模型</button>
+  <button class="btn-submit" onclick="showSubmitModal()">📤 提交答案</button>
+  <button class="btn-check" onclick="checkModel()">✅ 检查</button>
 </div>
 <div class="rotate-tip" id="rotateTip">💡 横屏使用效果更佳</div>
+<div class="submit-modal" id="submitModal">
+  <div class="submit-box" id="submitBox">
+    <h3>📤 提交你的答案</h3>
+    <p style="font-size:0.8rem;color:#888;margin-bottom:12px">提交后老师会收到你的模型布局</p>
+    <input type="text" id="studentName" placeholder="输入你的姓名" maxlength="20">
+    <div class="btn-row">
+      <button class="btn-cancel" onclick="closeSubmitModal()">取消</button>
+      <button class="btn-send" onclick="doSubmit()">提交</button>
+    </div>
+  </div>
+</div>
 <script>
 var CELL_INFO = {
   virus:{name:'诺如病毒',cls:'virus-body'},
@@ -116,13 +141,13 @@ var CELL_INFO = {
   antibody:{name:'抗体',cls:'antibody-body'}
 };
 var TARGETS = {
-  virus:{x:10,y:50},
-  apc:{x:28,y:50},
-  helperT:{x:48,y:20},
-  bcell:{x:65,y:55},
-  memory:{x:85,y:20},
-  plasma:{x:85,y:80},
-  antibody:{x:96,y:80}
+  virus:{x:10,y:55},
+  apc:{x:27,y:55},
+  helperT:{x:44,y:22},
+  bcell:{x:60,y:58},
+  memory:{x:77,y:20},
+  plasma:{x:77,y:82},
+  antibody:{x:91,y:82}
 };
 var HINTS = {
   virus:'病毒最先入侵，应在最左侧',
@@ -160,7 +185,7 @@ if(isPortrait()){
 }
 function onPalClick(item){
   var type = item.getAttribute('data-type');
-  if(type) addElement(type, 40 + Math.random()*20, 30 + Math.random()*30);
+  if(type) addElement(type, 35 + Math.random()*20, 30 + Math.random()*30);
 }
 function toggleArrowTool(){
   arrowMode = !arrowMode;
@@ -259,8 +284,8 @@ function makeDraggable(obj){
     var rect = canvas.getBoundingClientRect();
     var px = e.clientX - rect.left - dragOffset.x;
     var py = e.clientY - rect.top - dragOffset.y;
-    px = Math.max(0, Math.min(rect.width - el.offsetWidth, px));
-    py = Math.max(0, Math.min(rect.height - el.offsetHeight, py));
+    px = Math.max(20, Math.min(rect.width - 20, px));
+    py = Math.max(20, Math.min(rect.height - 20, py));
     obj.x = px / rect.width * 100;
     obj.y = py / rect.height * 100;
     el.style.left = obj.x + '%';
@@ -363,6 +388,7 @@ function checkModel(){
     }
   }
   showFb(allOk, results);
+  return allOk;
 }
 function showFb(ok, results){
   var fb = document.getElementById('feedback');
@@ -378,13 +404,68 @@ function showFb(ok, results){
   }
   if(ok){
     var tip = document.createElement('li');
-    tip.style.marginTop = '6px';
-    tip.style.color = '#2c5f2d';
+    tip.style.marginTop='6px';
+    tip.style.color='#2c5f2d';
     tip.innerHTML = '<b>流程：</b>诺如病毒→抗原呈递细胞→辅助性T细胞→B细胞→分化为浆细胞+记忆B细胞→浆细胞产生抗体';
     list.appendChild(tip);
   }
 }
-function hideFb(){ document.getElementById('feedback').className = 'feedback'; }
+function hideFb(){ document.getElementById('feedback').className='feedback'; }
+function showSubmitModal(){
+  document.getElementById('submitModal').className='submit-modal show';
+  setTimeout(function(){ document.getElementById('studentName').focus(); }, 100);
+}
+function closeSubmitModal(){ document.getElementById('submitModal').className='submit-modal'; }
+function collectLayout(){
+  var lines = [];
+  for(var i=0; i<elements.length; i++){
+    var e = elements[i];
+    lines.push(CELL_INFO[e.type].name + ' (X:' + e.x.toFixed(0) + '%, Y:' + e.y.toFixed(0) + '%)');
+  }
+  var arrowLines = [];
+  for(var j=0; j<arrows.length; j++){
+    var f = findById(arrows[j].fromId);
+    var t = findById(arrows[j].toId);
+    if(f && t) arrowLines.push(CELL_INFO[f.type].name + ' → ' + CELL_INFO[t.type].name);
+  }
+  return {cells: lines, arrows: arrowLines, cellCount: elements.length, arrowCount: arrows.length};
+}
+function doSubmit(){
+  var name = document.getElementById('studentName').value.trim();
+  if(!name){ alert('请输入你的姓名'); return; }
+  var layout = collectLayout();
+  var passed = checkModel();
+  var body = '学生姓名：' + name + '\n';
+  body += '是否正确：' + (passed ? '✅ 完全正确' : '❌ 有错误') + '\n';
+  body += '放置细胞数：' + layout.cellCount + '\n';
+  body += '画箭头数：' + layout.arrowCount + '\n';
+  body += '--- 细胞位置 ---\n' + layout.cells.join('\n') + '\n';
+  body += '--- 箭头连线 ---\n' + (layout.arrows.join('\n') || '无');
+  var btn = event.target;
+  btn.textContent = '发送中...';
+  btn.disabled = true;
+  var xhr = new XMLHttpRequest();
+  xhr.open('POST', 'https://formsubmit.co/ajax/2190659818@qq.com', true);
+  xhr.setRequestHeader('Content-Type', 'application/json');
+  xhr.onload = function(){
+    closeSubmitModal();
+    var box = document.getElementById('submitBox');
+    box.innerHTML = '<div class="submit-ok"><div class="big">✅</div><h3>提交成功！</h3><p style="font-size:0.85rem;color:#666;margin-top:8px">' + name + '，你的答案已发送给老师</p></div>';
+    setTimeout(function(){
+      box.innerHTML = '<h3>📤 提交你的答案</h3><p style="font-size:0.8rem;color:#888;margin-bottom:12px">提交后老师会收到你的模型布局</p><input type="text" id="studentName" placeholder="输入你的姓名" maxlength="20"><div class="btn-row"><button class="btn-cancel" onclick="closeSubmitModal()">取消</button><button class="btn-send" onclick="doSubmit()">提交</button></div>';
+    }, 2500);
+  };
+  xhr.onerror = function(){
+    btn.textContent = '提交';
+    btn.disabled = false;
+    alert('网络错误，请重试');
+  };
+  xhr.send(JSON.stringify({
+    _subject: '【生物作业】' + name + '的体液免疫模型' + (passed ? ' ✅正确' : ''),
+    name: name,
+    message: body
+  }));
+}
 window.addEventListener('resize', function(){ drawArrows(); });
 window.addEventListener('orientationchange', function(){ setTimeout(drawArrows, 300); });
 </script>
