@@ -424,47 +424,38 @@ function doSubmit(){
     html2canvas(canvas, {backgroundColor:'#ffffff', scale:2, useCORS:true, logging:false}).then(function(canvasImg){
       btn.textContent = '发送中...';
       canvasImg.toBlob(function(blob){
-        var iframe = document.getElementById('hiddenFrame');
-        if(!iframe){
-          iframe = document.createElement('iframe');
-          iframe.id = 'hiddenFrame';
-          iframe.name = 'hiddenFrame';
-          iframe.style.display = 'none';
-          document.body.appendChild(iframe);
-          iframe.onload = function(){
+        var fd = new FormData();
+        fd.append('name', name);
+        fd.append('_subject', '【生物作业】' + name + '的体液免疫模型' + (passed ? ' ✅正确' : ' ❌有误'));
+        fd.append('_template', 'table');
+        fd.append('message', '学生：' + name + '\n结果：' + (passed ? '完全正确' : '有错误') + '\n细胞数：' + elements.length + '\n箭头数：' + arrows.length);
+        fd.append('attachment', blob, name + '_model.png');
+        var xhr = new XMLHttpRequest();
+        xhr.open('POST', 'https://formsubmit.co/2507166891@qq.com', true);
+        xhr.setRequestHeader('Accept', 'application/json');
+        xhr.timeout = 20000;
+        xhr.onload = function(){
+          if(xhr.status >= 200 && xhr.status < 300){
             closeSubmitModal();
             var box = document.getElementById('submitBox');
             box.innerHTML = '<div class="submit-ok"><div class="big">✅</div><h3>提交成功！</h3><p style="font-size:0.85rem;color:#666;margin-top:8px">' + name + '，模型截图已发送给老师</p></div>';
             setTimeout(function(){
               box.innerHTML = '<h3>📤 提交你的答案</h3><p style="font-size:0.8rem;color:#888;margin-bottom:12px">提交后老师会收到你的模型截图</p><input type="text" id="studentName" placeholder="输入你的姓名" maxlength="20"><div class="btn-row"><button class="btn-cancel" onclick="closeSubmitModal()">取消</button><button class="btn-send" id="sendBtn" onclick="doSubmit()">提交</button></div>';
             }, 2500);
-          };
-        }
-        var form = document.createElement('form');
-        form.method = 'POST';
-        form.action = 'https://formsubmit.co/2507166891@qq.com';
-        form.target = 'hiddenFrame';
-        form.enctype = 'multipart/form-data';
-        function addField(n, v){
-          var input = document.createElement('input');
-          input.type = 'hidden'; input.name = n; input.value = v;
-          form.appendChild(input);
-        }
-        addField('_subject', '【生物作业】' + name + '的体液免疫模型' + (passed ? ' ✅正确' : ' ❌有误'));
-        addField('_template', 'table');
-        addField('姓名', name);
-        addField('结果', passed ? '✅ 完全正确' : '❌ 有错误');
-        addField('细胞数', String(elements.length));
-        addField('箭头数', String(arrows.length));
-        var fileInput = document.createElement('input');
-        fileInput.type = 'file'; fileInput.name = 'attachment';
-        var dt = new DataTransfer();
-        dt.items.add(new File([blob], name + '_model.png', {type:'image/png'}));
-        fileInput.files = dt.files;
-        form.appendChild(fileInput);
-        document.body.appendChild(form);
-        form.submit();
-        document.body.removeChild(form);
+          } else {
+            btn.textContent = '提交'; btn.disabled = false;
+            alert('提交失败(' + xhr.status + ')，请重试');
+          }
+        };
+        xhr.onerror = function(){
+          btn.textContent = '提交'; btn.disabled = false;
+          alert('网络错误，请重试');
+        };
+        xhr.ontimeout = function(){
+          btn.textContent = '提交'; btn.disabled = false;
+          alert('发送超时，请重试');
+        };
+        xhr.send(fd);
       }, 'image/png');
     }).catch(function(){
       btn.textContent = '提交'; btn.disabled = false;
