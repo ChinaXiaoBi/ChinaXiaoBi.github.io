@@ -121,7 +121,7 @@ body{display:flex;flex-direction:column;touch-action:manipulation}
 <div class="submit-modal" id="submitModal">
   <div class="submit-box" id="submitBox">
     <h3>📤 提交你的答案</h3>
-    <p style="font-size:0.8rem;color:#888;margin-bottom:12px">提交后老师会收到你的模型截图</p>
+    <p style="font-size:0.8rem;color:#888;margin-bottom:12px">提交后老师会收到通知</p>
     <input type="text" id="studentName" placeholder="输入你的姓名" maxlength="20">
     <div class="btn-row">
       <button class="btn-cancel" onclick="closeSubmitModal()">取消</button>
@@ -408,77 +408,45 @@ function showSubmitModal(){
   setTimeout(function(){ document.getElementById('studentName').focus(); }, 100);
 }
 function closeSubmitModal(){ document.getElementById('submitModal').className='submit-modal'; }
-function loadScript(src, cb){
-  var s = document.createElement('script');
-  s.src = src; s.onload = cb;
-  document.head.appendChild(s);
-}
 function doSubmit(){
   var name = document.getElementById('studentName').value.trim();
   if(!name){ alert('请输入你的姓名'); return; }
   var passed = checkModel();
   var btn = document.getElementById('sendBtn');
-  btn.textContent = '截图中...'; btn.disabled = true;
+  btn.textContent = '提交中...'; btn.disabled = true;
   hideFb();
-  function proceed(){
-    html2canvas(canvas, {backgroundColor:'#ffffff', scale:1, useCORS:true, logging:false}).then(function(canvasImg){
-      btn.textContent = '发送中...';
-      var dataUrl = canvasImg.toDataURL('image/jpeg', 0.6);
-      var payload = {
-        name: name,
-        _subject: '【生物作业】' + name + '的体液免疫模型' + (passed ? ' ✅正确' : ' ❌有误'),
-        _template: 'table',
-        '学生姓名': name,
-        '检查结果': passed ? '✅ 完全正确' : '❌ 有错误',
-        '细胞数': String(elements.length),
-        '箭头数': String(arrows.length),
-        '模型截图': dataUrl
-      };
-      var xhr = new XMLHttpRequest();
-      xhr.open('POST', 'https://formsubmit.co/ajax/2507166891@qq.com', true);
-      xhr.setRequestHeader('Content-Type', 'application/json');
-      xhr.setRequestHeader('Accept', 'application/json');
-      xhr.timeout = 20000;
-      xhr.onload = function(){
-        try {
-          var resp = JSON.parse(xhr.responseText);
-          if(resp.success === 'true' || xhr.status >= 200 && xhr.status < 300){
-            closeSubmitModal();
-            var box = document.getElementById('submitBox');
-            box.innerHTML = '<div class="submit-ok"><div class="big">✅</div><h3>提交成功！</h3><p style="font-size:0.85rem;color:#666;margin-top:8px">' + name + '，模型已发送给老师</p></div>';
-            setTimeout(function(){
-              box.innerHTML = '<h3>📤 提交你的答案</h3><p style="font-size:0.8rem;color:#888;margin-bottom:12px">提交后老师会收到你的模型截图</p><input type="text" id="studentName" placeholder="输入你的姓名" maxlength="20"><div class="btn-row"><button class="btn-cancel" onclick="closeSubmitModal()">取消</button><button class="btn-send" id="sendBtn" onclick="doSubmit()">提交</button></div>';
-            }, 2500);
-          } else {
-            btn.textContent = '提交'; btn.disabled = false;
-            alert('提交失败，请重试');
-          }
-        } catch(e) {
-          closeSubmitModal();
-          var box2 = document.getElementById('submitBox');
-          box2.innerHTML = '<div class="submit-ok"><div class="big">✅</div><h3>提交成功！</h3><p style="font-size:0.85rem;color:#666;margin-top:8px">' + name + '，模型已发送给老师</p></div>';
-          setTimeout(function(){
-            box2.innerHTML = '<h3>📤 提交你的答案</h3><p style="font-size:0.8rem;color:#888;margin-bottom:12px">提交后老师会收到你的模型截图</p><input type="text" id="studentName" placeholder="输入你的姓名" maxlength="20"><div class="btn-row"><button class="btn-cancel" onclick="closeSubmitModal()">取消</button><button class="btn-send" id="sendBtn" onclick="doSubmit()">提交</button></div>';
-          }, 2500);
-        }
-      };
-      xhr.onerror = function(){
-        btn.textContent = '提交'; btn.disabled = false;
-        alert('网络错误，请重试');
-      };
-      xhr.ontimeout = function(){
-        btn.textContent = '提交'; btn.disabled = false;
-        alert('发送超时，请重试');
-      };
-      xhr.send(JSON.stringify(payload));
-    }).catch(function(){
-      btn.textContent = '提交'; btn.disabled = false;
-      alert('截图失败，请重试');
-    });
-  }
-  if(typeof html2canvas === 'undefined'){
-    loadScript('https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js', proceed);
-  } else { proceed(); }
+  var payload = {
+    name: name,
+    _subject: '【生物作业】' + name + '的体液免疫模型' + (passed ? ' ✅正确' : ' ❌有误'),
+    _template: 'table',
+    '学生姓名': name,
+    '检查结果': passed ? '✅ 完全正确' : '❌ 有错误',
+    '细胞数': String(elements.length),
+    '箭头数': String(arrows.length)
+  };
+  var xhr = new XMLHttpRequest();
+  xhr.open('POST', 'https://formsubmit.co/ajax/2507166891@qq.com', true);
+  xhr.setRequestHeader('Content-Type', 'application/json');
+  xhr.setRequestHeader('Accept', 'application/json');
+  xhr.timeout = 15000;
+  xhr.onload = function(){
+    btn.textContent = '提交'; btn.disabled = false;
+    closeSubmitModal();
+    var box = document.getElementById('submitBox');
+    box.innerHTML = '<div class="submit-ok"><div class="big">✅</div><h3>提交成功！</h3><p style="font-size:0.85rem;color:#666;margin-top:8px">' + name + '，结果已发送给老师</p></div>';
+    setTimeout(function(){
+      box.innerHTML = '<h3>📤 提交你的答案</h3><p style="font-size:0.8rem;color:#888;margin-bottom:12px">提交后老师会收到通知</p><input type="text" id="studentName" placeholder="输入你的姓名" maxlength="20"><div class="btn-row"><button class="btn-cancel" onclick="closeSubmitModal()">取消</button><button class="btn-send" id="sendBtn" onclick="doSubmit()">提交</button></div>';
+    }, 2500);
+  };
+  xhr.onerror = function(){
+    btn.textContent = '提交'; btn.disabled = false;
+    alert('网络错误，请重试');
+  };
+  xhr.ontimeout = function(){
+    btn.textContent = '提交'; btn.disabled = false;
+    alert('发送超时，请重试');
+  };
+  xhr.send(JSON.stringify(payload));
 }
 window.addEventListener('resize', function(){ drawArrows(); });
 window.addEventListener('orientationchange', function(){ setTimeout(drawArrows, 300); });
