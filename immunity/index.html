@@ -121,7 +121,7 @@ body{display:flex;flex-direction:column;touch-action:manipulation}
 <div class="submit-modal" id="submitModal">
   <div class="submit-box" id="submitBox">
     <h3>📤 提交你的答案</h3>
-    <p style="font-size:0.8rem;color:#888;margin-bottom:12px">提交后老师会收到通知</p>
+    <p style="font-size:0.8rem;color:#888;margin-bottom:12px">提交后老师会收到你的模型截图</p>
     <input type="text" id="studentName" placeholder="输入你的姓名" maxlength="20">
     <div class="btn-row">
       <button class="btn-cancel" onclick="closeSubmitModal()">取消</button>
@@ -164,6 +164,12 @@ var eid = 0;
 var canvas = document.getElementById('canvas');
 var svg = document.getElementById('arrowSvg');
 var rafPending = false;
+function loadScript(src, cb){
+  var s = document.createElement('script');
+  s.src = src; s.onload = cb;
+  s.onerror = function(){ alert('截图组件加载失败，请检查网络'); };
+  document.head.appendChild(s);
+}
 function isPortrait(){ return window.innerHeight > window.innerWidth; }
 if(isPortrait()){
   setTimeout(function(){
@@ -413,8 +419,41 @@ function doSubmit(){
   if(!name){ alert('请输入你的姓名'); return; }
   var passed = checkModel();
   var btn = document.getElementById('sendBtn');
-  btn.textContent = '提交中...'; btn.disabled = true;
+  btn.textContent = '截图中...'; btn.disabled = true;
   hideFb();
+  function proceed(){
+    html2canvas(canvas, {backgroundColor:'#ffffff', scale:2, useCORS:true, logging:false}).then(function(canvasImg){
+      btn.textContent = '上传图片...';
+      canvasImg.toBlob(function(blob){
+        var fd = new FormData();
+        fd.append('reqtype', 'fileupload');
+        fd.append('time', '24h');
+        fd.append('fileToUpload', blob, 'model.png');
+        var up = new XMLHttpRequest();
+        up.open('POST', 'https://litterbox.catbox.moe/resources/internals/api.php', true);
+        up.timeout = 30000;
+        up.onload = function(){
+          var imgUrl = '';
+          if(up.status === 200 && up.responseText.indexOf('http') === 0){
+            imgUrl = up.responseText.trim();
+          }
+          sendEmail(name, passed, imgUrl, btn);
+        };
+        up.onerror = function(){ sendEmail(name, passed, '', btn); };
+        up.ontimeout = function(){ sendEmail(name, passed, '', btn); };
+        up.send(fd);
+      }, 'image/png');
+    }).catch(function(){
+      btn.textContent = '提交'; btn.disabled = false;
+      alert('截图失败，请重试');
+    });
+  }
+  if(typeof html2canvas === 'undefined'){
+    loadScript('https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js', proceed);
+  } else { proceed(); }
+}
+function sendEmail(name, passed, imgUrl, btn){
+  btn.textContent = '发送中...';
   var payload = {
     name: name,
     _subject: '【生物作业】' + name + '的体液免疫模型' + (passed ? ' ✅正确' : ' ❌有误'),
@@ -422,7 +461,8 @@ function doSubmit(){
     '学生姓名': name,
     '检查结果': passed ? '✅ 完全正确' : '❌ 有错误',
     '细胞数': String(elements.length),
-    '箭头数': String(arrows.length)
+    '箭头数': String(arrows.length),
+    '模型截图链接': imgUrl ? imgUrl : '（截图上传失败，请课堂查看）'
   };
   var xhr = new XMLHttpRequest();
   xhr.open('POST', 'https://formsubmit.co/ajax/2507166891@qq.com', true);
@@ -435,12 +475,12 @@ function doSubmit(){
     var box = document.getElementById('submitBox');
     box.innerHTML = '<div class="submit-ok"><div class="big">✅</div><h3>提交成功！</h3><p style="font-size:0.85rem;color:#666;margin-top:8px">' + name + '，结果已发送给老师</p></div>';
     setTimeout(function(){
-      box.innerHTML = '<h3>📤 提交你的答案</h3><p style="font-size:0.8rem;color:#888;margin-bottom:12px">提交后老师会收到通知</p><input type="text" id="studentName" placeholder="输入你的姓名" maxlength="20"><div class="btn-row"><button class="btn-cancel" onclick="closeSubmitModal()">取消</button><button class="btn-send" id="sendBtn" onclick="doSubmit()">提交</button></div>';
+      box.innerHTML = '<h3>📤 提交你的答案</h3><p style="font-size:0.8rem;color:#888;margin-bottom:12px">提交后老师会收到你的模型截图</p><input type="text" id="studentName" placeholder="输入你的姓名" maxlength="20"><div class="btn-row"><button class="btn-cancel" onclick="closeSubmitModal()">取消</button><button class="btn-send" id="sendBtn" onclick="doSubmit()">提交</button></div>';
     }, 2500);
   };
   xhr.onerror = function(){
     btn.textContent = '提交'; btn.disabled = false;
-    alert('网络错误，请重试');
+    alert('邮件发送失败，请重试');
   };
   xhr.ontimeout = function(){
     btn.textContent = '提交'; btn.disabled = false;
