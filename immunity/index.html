@@ -7,22 +7,28 @@
 <style>
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{width:100%;height:100%;overflow:hidden;font-family:-apple-system,BlinkMacSystemFont,'PingFang SC','Microsoft YaHei',sans-serif;background:#fff;color:#333;display:flex;flex-direction:column}
-.header{background:linear-gradient(135deg,#2c5f2d,#4a8c4a);color:#fff;padding:8px 12px;text-align:center;flex-shrink:0;z-index:10}
+.header{background:linear-gradient(135deg,#2c5f2d,#4a8c4a);color:#fff;padding:6px 12px;text-align:center;flex-shrink:0;z-index:10}
 .header h1{font-size:1rem;font-weight:700}
-.header p{font-size:0.7rem;opacity:0.85;margin-top:2px}
+.header p{font-size:0.68rem;opacity:0.85;margin-top:1px}
 .main{flex:1;display:flex;overflow:hidden;position:relative}
-.palette{width:120px;background:#f7f9f4;border-right:2px solid #d8e0d0;padding:8px;overflow-y:auto;flex-shrink:0;z-index:5}
-.palette h3{font-size:0.7rem;color:#777;margin-bottom:8px;text-align:center;letter-spacing:1px}
-.pal-item{display:flex;align-items:center;gap:6px;padding:6px;margin-bottom:5px;background:#fff;border:2px solid #d0d8c8;border-radius:8px;cursor:grab;touch-action:none;user-select:none;-webkit-user-select:none;font-size:0.72rem;transition:transform .1s,box-shadow .1s}
+.palette{background:#f7f9f4;border-right:2px solid #d8e0d0;padding:6px;overflow-x:auto;overflow-y:hidden;flex-shrink:0;z-index:5;display:flex;flex-direction:row;gap:6px;align-items:flex-start;width:auto}
+.palette h3{display:none}
+.pal-item{display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 8px;background:#fff;border:2px solid #d0d8c8;border-radius:8px;cursor:grab;touch-action:none;user-select:none;-webkit-user-select:none;font-size:0.62rem;transition:transform .1s,box-shadow .1s;min-width:62px;flex-shrink:0;text-align:center}
 .pal-item:active{transform:scale(0.95);cursor:grabbing}
 .pal-item:hover{border-color:#4a8c4a;box-shadow:0 2px 8px rgba(74,140,74,0.2)}
-.pal-item .pic{width:28px;height:28px;flex-shrink:0;display:flex;align-items:center;justify-content:center}
+.pal-item .pic{width:30px;height:30px;flex-shrink:0;display:flex;align-items:center;justify-content:center}
+.pal-item.arrow-tool{border-color:#2980b9;background:#eaf2f8}
+@media(min-width:600px) and (orientation:landscape){
+  .palette{flex-direction:column;width:130px;overflow-y:auto;overflow-x:hidden;padding:8px}
+  .palette h3{display:block;font-size:0.7rem;color:#777;margin-bottom:6px;text-align:center;letter-spacing:1px;width:100%}
+  .pal-item{flex-direction:row;font-size:0.72rem;min-width:0;width:100%;padding:6px;justify-content:flex-start}
+}
 .canvas{flex:1;position:relative;overflow:hidden;background:#fff;background-image:radial-gradient(circle,#dde5d5 1px,transparent 1px);background-size:22px 22px;touch-action:none}
 .placed{position:absolute;cursor:grab;touch-action:none;user-select:none;-webkit-user-select:none;display:flex;flex-direction:column;align-items:center;z-index:20;transition:filter .2s}
 .placed:active{cursor:grabbing;z-index:50}
+.placed.arrow-source{outline:3px solid #2980b9;outline-offset:2px;border-radius:10px;z-index:50}
 .placed .cell{width:54px;height:54px;display:flex;align-items:center;justify-content:center;position:relative}
 .placed .name{font-size:0.68rem;background:rgba(255,255,255,0.92);padding:2px 6px;border-radius:4px;white-space:nowrap;margin-top:3px;border:1px solid #e0e0e0;font-weight:600;color:#444}
-.placed.highlight{filter:drop-shadow(0 0 6px #ffd700)}
 .virus-body{width:40px;height:40px;background:#e74c3c;border-radius:50%;position:relative;border:2px solid #c0392b}
 .virus-body::before{content:'';position:absolute;inset:-6px;background:repeating-conic-gradient(from 0deg,#e74c3c 0deg 12deg,transparent 12deg 30deg);border-radius:50%;z-index:-1}
 .virus-body::after{content:'';position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:16px;height:16px;background:#c0392b;border-radius:50%}
@@ -37,28 +43,33 @@ html,body{width:100%;height:100%;overflow:hidden;font-family:-apple-system,Blink
 .memory-body{width:42px;height:42px;background:#e67e22;border-radius:50%;border:3px dashed #fff;outline:2px solid #d35400;position:relative}
 .memory-body::after{content:'';position:absolute;top:30%;left:30%;width:14px;height:14px;background:#d35400;border-radius:50%}
 .antibody-body{font-size:28px;line-height:1}
+.arrow-tool-body{font-size:24px;line-height:1}
 .arrow-svg{position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:10;overflow:visible}
-.controls{padding:8px 12px;background:#f7f9f4;border-top:2px solid #d8e0d0;display:flex;gap:8px;justify-content:center;flex-shrink:0;flex-wrap:wrap;z-index:10}
-.controls button{padding:10px 20px;border:none;border-radius:20px;font-size:0.88rem;cursor:pointer;font-weight:600;transition:transform .1s}
+.controls{padding:6px 10px;background:#f7f9f4;border-top:2px solid #d8e0d0;display:flex;gap:6px;justify-content:center;flex-shrink:0;flex-wrap:wrap;z-index:10}
+.controls button{padding:8px 16px;border:none;border-radius:18px;font-size:0.82rem;cursor:pointer;font-weight:600;transition:transform .1s}
 .controls button:active{transform:scale(0.95)}
 .btn-check{background:#2c5f2d;color:#fff}
 .btn-reset{background:#95a5a6;color:#fff}
 .btn-tip{background:#2980b9;color:#fff}
 .btn-del{background:#e74c3c;color:#fff}
 .btn-del.active{background:#c0392b;box-shadow:0 0 0 3px rgba(231,76,60,0.3)}
-.feedback{position:absolute;top:10px;left:50%;transform:translateX(-50%);background:#fff8e1;border:2px solid #ffc107;border-radius:12px;padding:12px 16px;max-width:92%;width:340px;z-index:100;display:none;box-shadow:0 4px 24px rgba(0,0,0,0.15)}
+.feedback{position:absolute;top:10px;left:50%;transform:translateX(-50%);background:#fff8e1;border:2px solid #ffc107;border-radius:12px;padding:12px 16px;max-width:92%;width:360px;z-index:100;display:none;box-shadow:0 4px 24px rgba(0,0,0,0.15)}
 .feedback.show{display:block;animation:fbIn .3s ease}
 @keyframes fbIn{from{opacity:0;transform:translateX(-50%) translateY(-10px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}
 .feedback.ok{background:#e8f5e9;border-color:#4caf50}
-.feedback h4{font-size:0.95rem;margin-bottom:6px;display:flex;align-items:center;gap:6px}
+.feedback h4{font-size:0.95rem;margin-bottom:6px}
 .feedback ul{padding-left:18px;font-size:0.82rem;line-height:1.7;color:#555}
 .feedback .close-fb{float:right;cursor:pointer;font-size:1.1rem;color:#999;padding:0 4px}
 .feedback .close-fb:hover{color:#333}
 .zone-label{position:absolute;font-size:0.65rem;color:#bbb;pointer-events:none;z-index:1}
-@media(max-width:600px){
-  .palette{width:96px;padding:5px}
-  .pal-item{font-size:0.62rem;padding:4px;gap:4px}
-  .pal-item .pic{width:22px;height:22px}
+.rotate-hint{display:none;position:fixed;inset:0;background:rgba(44,95,45,0.97);z-index:999;align-items:center;justify-content:center;flex-direction:column;color:#fff;text-align:center;padding:20px}
+.rotate-hint.show{display:flex}
+.rotate-hint .phone-icon{font-size:60px;animation:rotatePhone 1.5s ease infinite;margin-bottom:20px}
+@keyframes rotatePhone{0%,20%{transform:rotate(0deg)}60%,100%{transform:rotate(90deg)}}
+.rotate-hint h2{font-size:1.2rem;margin-bottom:10px}
+.rotate-hint p{font-size:0.9rem;opacity:0.8;line-height:1.6}
+.rotate-hint .continue{margin-top:16px;padding:8px 20px;background:rgba(255,255,255,0.2);border:1px solid rgba(255,255,255,0.4);border-radius:20px;color:#fff;font-size:0.85rem;cursor:pointer}
+@media(max-width:600px) and (orientation:portrait){
   .placed .cell{width:42px;height:42px}
   .placed .name{font-size:0.58rem}
   .virus-body{width:30px;height:30px}
@@ -66,17 +77,24 @@ html,body{width:100%;height:100%;overflow:hidden;font-family:-apple-system,Blink
   .helper-body,.bcell-body,.memory-body{width:34px;height:34px}
   .plasma-body{width:44px;height:30px}
   .antibody-body{font-size:22px}
-  .controls button{padding:8px 14px;font-size:0.78rem}
+  .pal-item{min-width:52px;padding:4px;font-size:0.58rem}
+  .pal-item .pic{width:24px;height:24px}
 }
 </style>
 </head>
 <body>
+<div class="rotate-hint" id="rotateHint">
+  <div class="phone-icon">📱</div>
+  <h2>请横屏使用</h2>
+  <p>横屏后画布更大，便于拖拽搭建模型<br>教室大屏使用无需旋转</p>
+  <button class="continue" onclick="document.getElementById('rotateHint').classList.remove('show')">继续竖屏使用</button>
+</div>
 <div class="header">
   <h1>🧬 体液免疫交互模型</h1>
   <p>高中生物选择性必修1 · 从左侧拖入细胞，搭建体液免疫过程</p>
 </div>
 <div class="main">
-  <div class="palette">
+  <div class="palette" id="palette">
     <h3>素材栏</h3>
     <div class="pal-item" data-type="virus"><span class="pic"><div class="virus-body"></div></span>诺如病毒</div>
     <div class="pal-item" data-type="apc"><span class="pic"><div class="apc-body"></div></span>抗原呈递细胞</div>
@@ -85,6 +103,7 @@ html,body{width:100%;height:100%;overflow:hidden;font-family:-apple-system,Blink
     <div class="pal-item" data-type="plasma"><span class="pic"><div class="plasma-body"></div></span>浆细胞</div>
     <div class="pal-item" data-type="memory"><span class="pic"><div class="memory-body"></div></span>记忆B细胞</div>
     <div class="pal-item" data-type="antibody"><span class="pic"><div class="antibody-body">Y</div></span>抗体</div>
+    <div class="pal-item arrow-tool" id="arrowTool"><span class="pic"><div class="arrow-tool-body">↗</div></span>箭头</div>
   </div>
   <div class="canvas" id="canvas">
     <svg class="arrow-svg" id="arrowSvg"></svg>
@@ -120,18 +139,39 @@ const TARGETS = {
   plasma:{x:78,y:75,hint:'B细胞增殖分化出浆细胞，在右下方'},
   antibody:{x:93,y:75,hint:'浆细胞分泌抗体，在浆细胞右侧'}
 };
+const REQUIRED_ARROWS = [
+  {from:'virus',to:'apc',hint:'诺如病毒→抗原呈递细胞'},
+  {from:'apc',to:'helperT',hint:'抗原呈递细胞→辅助性T细胞'},
+  {from:'helperT',to:'bcell',hint:'辅助性T细胞→B细胞'},
+  {from:'bcell',to:'plasma',hint:'B细胞→浆细胞'},
+  {from:'bcell',to:'memory',hint:'B细胞→记忆B细胞'},
+  {from:'plasma',to:'antibody',hint:'浆细胞→抗体'}
+];
 let elements = [];
+let arrows = [];
 let dragEl = null, dragOffset = {x:0,y:0};
 let delMode = false;
+let arrowMode = false;
+let arrowSource = null;
 let eid = 0;
 const canvas = document.getElementById('canvas');
 const svg = document.getElementById('arrowSvg');
-document.querySelectorAll('.pal-item').forEach(item=>{
+if(window.innerWidth < 600 && window.matchMedia('(orientation: portrait)').matches){
+  setTimeout(()=>document.getElementById('rotateHint').classList.add('show'),800);
+}
+document.querySelectorAll('.pal-item[data-type]').forEach(item=>{
   item.addEventListener('pointerdown',e=>{
     e.preventDefault();
     const type = item.dataset.type;
-    addElement(type, 50, 45);
+    addElement(type, 45, 45);
   });
+});
+document.getElementById('arrowTool').addEventListener('pointerdown',e=>{
+  e.preventDefault();
+  arrowMode = !arrowMode;
+  arrowSource = null;
+  document.getElementById('arrowTool').style.outline = arrowMode ? '3px solid #2980b9' : 'none';
+  if(!arrowMode) clearArrowSourceHighlight();
 });
 function addElement(type,xPct,yPct){
   const info = CELL_INFO[type];
@@ -145,14 +185,55 @@ function addElement(type,xPct,yPct){
   elements.push(obj);
   makeDraggable(obj);
 }
+function getCenter(el){
+  const rect = canvas.getBoundingClientRect();
+  const elRect = el.getBoundingClientRect();
+  return {x: elRect.left - rect.left + elRect.width/2, y: elRect.top - rect.top + elRect.height/2};
+}
+function drawArrows(){
+  svg.innerHTML = '<defs><marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto"><polygon points="0 0, 10 3.5, 0 7" fill="#2c5f2d"/></marker></defs>';
+  arrows.forEach(a=>{
+    const from = elements.find(e=>e.id===a.fromId);
+    const to = elements.find(e=>e.id===a.toId);
+    if(!from||!to)return;
+    const p1 = getCenter(from.el);
+    const p2 = getCenter(to.el);
+    const line = document.createElementNS('http://www.w3.org/2000/svg','line');
+    line.setAttribute('x1',p1.x);line.setAttribute('y1',p1.y);
+    line.setAttribute('x2',p2.x);line.setAttribute('y2',p2.y);
+    line.setAttribute('stroke','#2c5f2d');line.setAttribute('stroke-width','2.5');
+    line.setAttribute('marker-end','url(#arrowhead)');
+    svg.appendChild(line);
+  });
+}
+function clearArrowSourceHighlight(){
+  elements.forEach(e=>e.el.classList.remove('arrow-source'));
+}
 function makeDraggable(obj){
   const el = obj.el;
   el.addEventListener('pointerdown',e=>{
     e.preventDefault();
     e.stopPropagation();
     if(delMode){
+      arrows = arrows.filter(a=>a.fromId!==obj.id && a.toId!==obj.id);
       el.remove();
       elements = elements.filter(x=>x.id!==obj.id);
+      drawArrows();
+      return;
+    }
+    if(arrowMode){
+      if(!arrowSource){
+        arrowSource = obj;
+        el.classList.add('arrow-source');
+      } else if(arrowSource.id === obj.id){
+        el.classList.remove('arrow-source');
+        arrowSource = null;
+      } else {
+        arrows.push({fromId:arrowSource.id,toId:obj.id});
+        clearArrowSourceHighlight();
+        arrowSource = null;
+        drawArrows();
+      }
       return;
     }
     dragEl = obj;
@@ -174,6 +255,7 @@ function makeDraggable(obj){
     obj.y = py / rect.height * 100;
     el.style.left = obj.x+'%';
     el.style.top = obj.y+'%';
+    drawArrows();
   });
   el.addEventListener('pointerup',e=>{
     if(dragEl){dragEl.el.style.zIndex=20;dragEl=null;}
@@ -184,12 +266,16 @@ function makeDraggable(obj){
 }
 document.getElementById('btnDel').addEventListener('click',function(){
   delMode = !delMode;
+  arrowMode = false;
+  clearArrowSourceHighlight();
   this.classList.toggle('active',delMode);
   this.textContent = delMode ? '✅ 退出删除' : '🗑 删除模式';
 });
 document.getElementById('btnReset').addEventListener('click',()=>{
   elements.forEach(o=>o.el.remove());
   elements = [];
+  arrows = [];
+  drawArrows();
   hideFb();
 });
 document.getElementById('btnTip').addEventListener('click',()=>{
@@ -215,7 +301,7 @@ function checkModel(){
   for(const[type,t]of Object.entries(TARGETS)){
     const placed = elements.filter(o=>o.type===type);
     if(placed.length===0){
-      results.push({type,ok:false,msg:`❌ 缺少【${CELL_INFO[type].name}】——${t.hint}`});
+      results.push({msg:`❌ 缺少【${CELL_INFO[type].name}】——${t.hint}`});
       allOk = false;
       continue;
     }
@@ -223,30 +309,26 @@ function checkModel(){
     const dx = Math.abs(o.x - t.x);
     const dy = Math.abs(o.y - t.y);
     if(dx <= 14 && dy <= 16){
-      results.push({type,ok:true,msg:`✅ ${CELL_INFO[type].name}位置正确`});
+      results.push({msg:`✅ ${CELL_INFO[type].name}位置正确`});
     } else {
-      results.push({type,ok:false,msg:`⚠️ 【${CELL_INFO[type].name}】位置不对——${t.hint}`});
+      results.push({msg:`⚠️ 【${CELL_INFO[type].name}】位置不对——${t.hint}`});
       allOk = false;
     }
   }
   const byType = {};
   elements.forEach(o=>{if(!byType[o.type])byType[o.type]=o});
-  if(byType.virus && byType.apc && byType.apc.x < byType.virus.x){
-    results.push({type:'order',ok:false,msg:'⚠️ 诺如病毒应在抗原呈递细胞之前（左侧）'});
-    allOk=false;
-  }
-  if(byType.apc && byType.helperT && byType.helperT.x < byType.apc.x){
-    results.push({type:'order2',ok:false,msg:'⚠️ 辅助性T细胞应在抗原呈递细胞之后'});
-    allOk=false;
-  }
-  if(byType.bcell && byType.plasma && byType.plasma.x < byType.bcell.x){
-    results.push({type:'order3',ok:false,msg:'⚠️ 浆细胞应由B细胞分化而来，应在B细胞右侧'});
-    allOk=false;
-  }
-  if(byType.plasma && byType.antibody && byType.antibody.x < byType.plasma.x){
-    results.push({type:'order4',ok:false,msg:'⚠️ 抗体由浆细胞分泌，应在浆细胞右侧'});
-    allOk=false;
-  }
+  REQUIRED_ARROWS.forEach(ra=>{
+    const fromEl = byType[ra.from];
+    const toEl = byType[ra.to];
+    if(!fromEl||!toEl)return;
+    const hasArrow = arrows.some(a=>a.fromId===fromEl.id && a.toId===toEl.id);
+    if(!hasArrow){
+      results.push({msg:`➡️ 缺少箭头：${ra.hint}`});
+      allOk = false;
+    } else {
+      results.push({msg:`✅ 箭头 ${ra.hint}`});
+    }
+  });
   showFb(allOk, results);
 }
 function showFb(ok, results){
@@ -271,6 +353,7 @@ function showFb(ok, results){
 }
 function hideFb(){document.getElementById('feedback').className='feedback'}
 window.hideFb = hideFb;
+window.addEventListener('resize',drawArrows);
 </script>
 </body>
 </html>
