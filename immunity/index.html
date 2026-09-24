@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <title>体液免疫交互模型</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{width:100%;height:100%;overflow:hidden;font-family:-apple-system,BlinkMacSystemFont,'PingFang SC','Microsoft YaHei',sans-serif;background:#fff;color:#333}
@@ -43,7 +44,6 @@ body{display:flex;flex-direction:column}
 .controls button{padding:7px 13px;border:none;border-radius:16px;font-size:0.78rem;cursor:pointer;font-weight:600}
 .controls button:active{transform:scale(0.95)}
 .btn-check{background:#2c5f2d;color:#fff}
-.btn-demo{background:#8e44ad;color:#fff}
 .btn-reset{background:#95a5a6;color:#fff}
 .btn-tip{background:#2980b9;color:#fff}
 .btn-del{background:#e74c3c;color:#fff}
@@ -69,6 +69,7 @@ body{display:flex;flex-direction:column}
 .submit-box .btn-row button{padding:8px 20px;border:none;border-radius:18px;font-size:0.9rem;font-weight:600;cursor:pointer}
 .submit-box .btn-cancel{background:#eee;color:#666}
 .submit-box .btn-send{background:#e67e22;color:#fff}
+.submit-box .btn-send:disabled{background:#ccc}
 .submit-ok{text-align:center;padding:20px}
 .submit-ok .big{font-size:48px;margin-bottom:10px}
 @media(min-width:500px) and (orientation:landscape){
@@ -114,7 +115,6 @@ body{display:flex;flex-direction:column}
   <button class="btn-tip" onclick="showTips()">💡 提示</button>
   <button class="btn-del" id="btnDel" onclick="toggleDel()">🗑 删除</button>
   <button class="btn-reset" onclick="resetAll()">🔄 重置</button>
-  <button class="btn-demo" onclick="demoAnswer()">📺 演示答案</button>
   <button class="btn-submit" onclick="showSubmitModal()">📤 提交答案</button>
   <button class="btn-check" onclick="checkModel()">✅ 检查</button>
 </div>
@@ -122,23 +122,23 @@ body{display:flex;flex-direction:column}
 <div class="submit-modal" id="submitModal">
   <div class="submit-box" id="submitBox">
     <h3>📤 提交你的答案</h3>
-    <p style="font-size:0.8rem;color:#888;margin-bottom:12px">提交后老师会收到你的模型布局</p>
+    <p style="font-size:0.8rem;color:#888;margin-bottom:12px">提交后老师会收到你的模型截图</p>
     <input type="text" id="studentName" placeholder="输入你的姓名" maxlength="20">
     <div class="btn-row">
       <button class="btn-cancel" onclick="closeSubmitModal()">取消</button>
-      <button class="btn-send" onclick="doSubmit()">提交</button>
+      <button class="btn-send" id="sendBtn" onclick="doSubmit()">提交</button>
     </div>
   </div>
 </div>
 <script>
 var CELL_INFO = {
-  virus:{name:'诺如病毒',cls:'virus-body'},
-  apc:{name:'抗原呈递细胞',cls:'apc-body'},
-  helperT:{name:'辅助性T细胞',cls:'helper-body'},
-  bcell:{name:'B细胞',cls:'bcell-body'},
-  plasma:{name:'浆细胞',cls:'plasma-body'},
-  memory:{name:'记忆B细胞',cls:'memory-body'},
-  antibody:{name:'抗体',cls:'antibody-body'}
+  virus:{name:'诺如病毒',cls:'virus-body',color:'#e74c3c'},
+  apc:{name:'抗原呈递细胞',cls:'apc-body',color:'#27ae60'},
+  helperT:{name:'辅助性T细胞',cls:'helper-body',color:'#3498db'},
+  bcell:{name:'B细胞',cls:'bcell-body',color:'#f1c40f'},
+  plasma:{name:'浆细胞',cls:'plasma-body',color:'#9b59b6'},
+  memory:{name:'记忆B细胞',cls:'memory-body',color:'#e67e22'},
+  antibody:{name:'抗体',cls:'antibody-body',color:'#c0392b'}
 };
 var TARGETS = {
   virus:{x:10,y:55},
@@ -150,13 +150,13 @@ var TARGETS = {
   antibody:{x:91,y:82}
 };
 var HINTS = {
-  virus:'病毒最先入侵，应在最左侧',
-  apc:'抗原呈递细胞摄取处理病毒，紧邻病毒',
-  helperT:'辅助性T细胞接受APC呈递的抗原',
-  bcell:'B细胞接受抗原和辅助性T细胞的信号',
-  memory:'B细胞分化出记忆B细胞',
-  plasma:'B细胞分化出浆细胞',
-  antibody:'浆细胞分泌抗体'
+  virus:'病毒是免疫反应的起点，思考它和谁最先接触',
+  apc:'它负责摄取、处理和呈递抗原，想想它和病毒、T细胞的关系',
+  helperT:'它接受APC呈递的信号后被激活，再作用于B细胞',
+  bcell:'B细胞需要抗原和辅助性T细胞的两个信号才能活化增殖',
+  memory:'B细胞活化后会分化为两种细胞，一种长期存活',
+  plasma:'另一种分化方向专门负责产生免疫活性物质',
+  antibody:'它能与抗原特异性结合，是谁产生的？'
 };
 var REQUIRED_ARROWS = [
   {from:'virus',to:'apc'},
@@ -311,23 +311,6 @@ function resetAll(){
   elements = []; arrows = [];
   drawArrows(); hideFb();
 }
-function demoAnswer(){
-  for(var i=0; i<elements.length; i++) elements[i].el.remove();
-  elements = []; arrows = [];
-  var placedByType = {};
-  var keys = Object.keys(TARGETS);
-  for(var k=0; k<keys.length; k++){
-    var type = keys[k];
-    addElement(type, TARGETS[type].x, TARGETS[type].y);
-    placedByType[type] = elements[elements.length-1];
-  }
-  for(var j=0; j<REQUIRED_ARROWS.length; j++){
-    var ra = REQUIRED_ARROWS[j];
-    arrows.push({fromId: placedByType[ra.from].id, toId: placedByType[ra.to].id});
-  }
-  setTimeout(drawArrows, 100);
-  hideFb();
-}
 function showTips(){
   var keys = Object.keys(TARGETS);
   for(var i=0; i<keys.length; i++){
@@ -355,7 +338,7 @@ function checkModel(){
     var placed = [];
     for(var j=0; j<elements.length; j++){ if(elements[j].type===type) placed.push(elements[j]); }
     if(placed.length === 0){
-      results.push('❌ 缺少【' + CELL_INFO[type].name + '】——' + HINTS[type]);
+      results.push('❌ 缺少【' + CELL_INFO[type].name + '】');
       allOk = false;
       continue;
     }
@@ -365,7 +348,7 @@ function checkModel(){
     if(dx <= 15 && dy <= 18){
       results.push('✅ ' + CELL_INFO[type].name + '位置正确');
     } else {
-      results.push('⚠️ 【' + CELL_INFO[type].name + '】位置不对——' + HINTS[type]);
+      results.push('🤔 ' + CELL_INFO[type].name + '的位置再想想——' + HINTS[type]);
       allOk = false;
     }
   }
@@ -381,7 +364,7 @@ function checkModel(){
       if(arrows[n].fromId===fromEl.id && arrows[n].toId===toEl.id){ hasArrow=true; break; }
     }
     if(!hasArrow){
-      results.push('➡️ 缺少箭头：' + CELL_INFO[ra.from].name + '→' + CELL_INFO[ra.to].name);
+      results.push('↗️ ' + CELL_INFO[ra.from].name + '和' + CELL_INFO[ra.to].name + '之间需要箭头');
       allOk = false;
     } else {
       results.push('✅ 箭头 ' + CELL_INFO[ra.from].name + '→' + CELL_INFO[ra.to].name);
@@ -406,7 +389,7 @@ function showFb(ok, results){
     var tip = document.createElement('li');
     tip.style.marginTop='6px';
     tip.style.color='#2c5f2d';
-    tip.innerHTML = '<b>流程：</b>诺如病毒→抗原呈递细胞→辅助性T细胞→B细胞→分化为浆细胞+记忆B细胞→浆细胞产生抗体';
+    tip.textContent = '流程：诺如病毒→抗原呈递细胞→辅助性T细胞→B细胞→浆细胞+记忆B细胞→抗体';
     list.appendChild(tip);
   }
 }
@@ -416,55 +399,45 @@ function showSubmitModal(){
   setTimeout(function(){ document.getElementById('studentName').focus(); }, 100);
 }
 function closeSubmitModal(){ document.getElementById('submitModal').className='submit-modal'; }
-function collectLayout(){
-  var lines = [];
-  for(var i=0; i<elements.length; i++){
-    var e = elements[i];
-    lines.push(CELL_INFO[e.type].name + ' (X:' + e.x.toFixed(0) + '%, Y:' + e.y.toFixed(0) + '%)');
-  }
-  var arrowLines = [];
-  for(var j=0; j<arrows.length; j++){
-    var f = findById(arrows[j].fromId);
-    var t = findById(arrows[j].toId);
-    if(f && t) arrowLines.push(CELL_INFO[f.type].name + ' → ' + CELL_INFO[t.type].name);
-  }
-  return {cells: lines, arrows: arrowLines, cellCount: elements.length, arrowCount: arrows.length};
-}
 function doSubmit(){
   var name = document.getElementById('studentName').value.trim();
   if(!name){ alert('请输入你的姓名'); return; }
-  var layout = collectLayout();
   var passed = checkModel();
-  var body = '学生姓名：' + name + '\n';
-  body += '是否正确：' + (passed ? '✅ 完全正确' : '❌ 有错误') + '\n';
-  body += '放置细胞数：' + layout.cellCount + '\n';
-  body += '画箭头数：' + layout.arrowCount + '\n';
-  body += '--- 细胞位置 ---\n' + layout.cells.join('\n') + '\n';
-  body += '--- 箭头连线 ---\n' + (layout.arrows.join('\n') || '无');
-  var btn = event.target;
-  btn.textContent = '发送中...';
+  var btn = document.getElementById('sendBtn');
+  btn.textContent = '截图中...';
   btn.disabled = true;
-  var xhr = new XMLHttpRequest();
-  xhr.open('POST', 'https://formsubmit.co/ajax/2190659818@qq.com', true);
-  xhr.setRequestHeader('Content-Type', 'application/json');
-  xhr.onload = function(){
-    closeSubmitModal();
-    var box = document.getElementById('submitBox');
-    box.innerHTML = '<div class="submit-ok"><div class="big">✅</div><h3>提交成功！</h3><p style="font-size:0.85rem;color:#666;margin-top:8px">' + name + '，你的答案已发送给老师</p></div>';
-    setTimeout(function(){
-      box.innerHTML = '<h3>📤 提交你的答案</h3><p style="font-size:0.8rem;color:#888;margin-bottom:12px">提交后老师会收到你的模型布局</p><input type="text" id="studentName" placeholder="输入你的姓名" maxlength="20"><div class="btn-row"><button class="btn-cancel" onclick="closeSubmitModal()">取消</button><button class="btn-send" onclick="doSubmit()">提交</button></div>';
-    }, 2500);
-  };
-  xhr.onerror = function(){
+  hideFb();
+  html2canvas(canvas, {backgroundColor:'#ffffff', scale:2, useCORS:true, logging:false}).then(function(canvasImg){
+    btn.textContent = '发送中...';
+    canvasImg.toBlob(function(blob){
+      var fd = new FormData();
+      fd.append('name', name);
+      fd.append('_subject', '【生物作业】' + name + '的体液免疫模型' + (passed ? ' ✅正确' : ' ❌有误'));
+      fd.append('result', passed ? '✅ 完全正确' : '❌ 有错误，详见截图');
+      fd.append('message', '学生：' + name + '\n结果：' + (passed ? '完全正确' : '有错误') + '\n细胞数：' + elements.length + '\n箭头数：' + arrows.length);
+      fd.append('attachment', blob, name + '_体液免疫模型.png');
+      var xhr = new XMLHttpRequest();
+      xhr.open('POST', 'https://formsubmit.co/ajax/2507166891@qq.com', true);
+      xhr.onload = function(){
+        closeSubmitModal();
+        var box = document.getElementById('submitBox');
+        box.innerHTML = '<div class="submit-ok"><div class="big">✅</div><h3>提交成功！</h3><p style="font-size:0.85rem;color:#666;margin-top:8px">' + name + '，你的模型截图已发送给老师</p></div>';
+        setTimeout(function(){
+          box.innerHTML = '<h3>📤 提交你的答案</h3><p style="font-size:0.8rem;color:#888;margin-bottom:12px">提交后老师会收到你的模型截图</p><input type="text" id="studentName" placeholder="输入你的姓名" maxlength="20"><div class="btn-row"><button class="btn-cancel" onclick="closeSubmitModal()">取消</button><button class="btn-send" id="sendBtn" onclick="doSubmit()">提交</button></div>';
+        }, 2500);
+      };
+      xhr.onerror = function(){
+        btn.textContent = '提交';
+        btn.disabled = false;
+        alert('网络错误，请重试');
+      };
+      xhr.send(fd);
+    }, 'image/png');
+  }).catch(function(err){
     btn.textContent = '提交';
     btn.disabled = false;
-    alert('网络错误，请重试');
-  };
-  xhr.send(JSON.stringify({
-    _subject: '【生物作业】' + name + '的体液免疫模型' + (passed ? ' ✅正确' : ''),
-    name: name,
-    message: body
-  }));
+    alert('截图失败，请重试');
+  });
 }
 window.addEventListener('resize', function(){ drawArrows(); });
 window.addEventListener('orientationchange', function(){ setTimeout(drawArrows, 300); });
