@@ -16,7 +16,7 @@ body{display:flex;flex-direction:column;touch-action:manipulation}
 .header p{font-size:0.65rem;opacity:0.85;margin-top:1px}
 .main{flex:1;display:flex;flex-direction:column;overflow:hidden;position:relative}
 .palette{background:#f7f9f4;padding:5px;overflow-x:auto;overflow-y:hidden;flex-shrink:0;display:flex;flex-direction:row;gap:5px;align-items:flex-start;border-bottom:2px solid #d8e0d0;-webkit-overflow-scrolling:touch}
-.pal-item{display:flex;flex-direction:column;align-items:center;gap:2px;padding:5px 7px;background:#fff;border:2px solid #d0d8c8;border-radius:8px;cursor:pointer;user-select:none;-webkit-user-select:none;font-size:0.6rem;min-width:56px;flex-shrink:0;text-align:center}
+.pal-item{display:flex;flex-direction:column;align-items:center;gap:2px;padding:5px 7px;background:#fff;border:2px solid #d0d8c8;border-radius:8px;cursor:pointer;user-select:none;-webkit-user-select:none;font-size:0.6rem;min-width:56px;flex-shrink:0;text-align:center;position:relative}
 .pal-item:active{background:#e8f5e9}
 .pal-item .pic{width:28px;height:28px;flex-shrink:0;display:flex;align-items:center;justify-content:center}
 .pal-item.arrow-tool{border-color:#2980b9;background:#eaf2f8}
@@ -79,6 +79,11 @@ body{display:flex;flex-direction:column;touch-action:manipulation}
 .submit-box .btn-send:disabled{background:#ccc}
 .submit-ok{text-align:center;padding:20px}
 .submit-ok .big{font-size:48px;margin-bottom:10px}
+.color-pop{position:absolute;bottom:calc(100% + 6px);left:50%;transform:translateX(-50%);background:#fff;border-radius:12px;box-shadow:0 4px 20px rgba(0,0,0,0.2);padding:8px;display:none;z-index:200;white-space:nowrap}
+.color-pop.show{display:flex;gap:6px}
+.color-dot{width:26px;height:26px;border-radius:50%;cursor:pointer;border:3px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,0.3);flex-shrink:0}
+.color-dot:active{transform:scale(1.2)}
+.color-dot.selected{outline:3px solid #333;outline-offset:1px}
 @media(min-width:500px) and (orientation:landscape){
   .main{flex-direction:row}
   .palette{flex-direction:column;width:120px;overflow-y:auto;overflow-x:hidden;border-right:2px solid #d8e0d0;border-bottom:none;padding:8px;align-items:stretch}
@@ -108,7 +113,10 @@ body{display:flex;flex-direction:column;touch-action:manipulation}
     <div class="pal-item" data-type="memory" onclick="onPalClick(this)"><span class="pic"><div class="memory-body"></div></span>记忆B细胞</div>
     <div class="pal-item" data-type="antibody" onclick="onPalClick(this)"><span class="pic"><div class="antibody-body"><svg viewBox="0 0 40 40" width="24" height="24"><path d="M20 35 L20 20 M20 20 L8 8 M20 20 L32 8" stroke="#c0392b" stroke-width="4" stroke-linecap="round" fill="none"/></svg></div></span>抗体</div>
     <div class="pal-item arrow-tool" id="arrowTool" onclick="toggleArrowTool()"><span class="pic"><div class="arrow-tool-body">↗</div></span>箭头</div>
-    <div class="pal-item pen-tool" id="penTool" onclick="togglePenTool()"><span class="pic" style="font-size:20px">🖊️</span><span id="penLabel">画笔</span></div>
+    <div class="pal-item pen-tool" id="penTool" onclick="onPenClick()">
+      <span class="pic" style="font-size:20px">🖊️</span><span id="penLabel">画笔</span>
+      <div class="color-pop" id="colorPop"></div>
+    </div>
     <div class="pal-item eraser-tool" id="eraserTool" onclick="toggleEraserTool()"><span class="pic" style="font-size:20px">🧽</span>橡皮</div>
   </div>
   <div class="canvas" id="canvas">
@@ -157,8 +165,8 @@ var REQUIRED_ARROWS = [
   {from:'virus',to:'apc'},{from:'apc',to:'helperT'},{from:'helperT',to:'bcell'},
   {from:'bcell',to:'plasma'},{from:'bcell',to:'memory'},{from:'plasma',to:'antibody'}
 ];
-var PEN_COLORS = ['#e74c3c','#2980b9','#27ae60','#2c3e50','#e67e22','#8e44ad'];
-var PEN_COLOR_NAMES = ['红','蓝','绿','黑','橙','紫'];
+var PEN_COLORS = ['#e74c3c','#2980b9','#27ae60','#2c3e50','#e67e22','#8e44ad','#f1c40f','#ffffff'];
+var PEN_COLOR_NAMES = ['红','蓝','绿','黑','橙','紫','黄','白'];
 var elements = [];
 var arrows = [];
 var undoStack = [];
@@ -174,6 +182,27 @@ var canvas = document.getElementById('canvas');
 var svg = document.getElementById('arrowSvg');
 var drawSvg = document.getElementById('drawSvg');
 var rafPending = false;
+var colorPop = document.getElementById('colorPop');
+function buildColorPop(){
+  colorPop.innerHTML = '';
+  for(var i=0; i<PEN_COLORS.length; i++){
+    (function(idx){
+      var dot = document.createElement('div');
+      dot.className = 'color-dot' + (idx === penColorIdx ? ' selected' : '');
+      dot.style.background = PEN_COLORS[idx];
+      if(idx === 7) dot.style.boxShadow = '0 0 0 2px #ccc, 0 1px 4px rgba(0,0,0,0.3)';
+      dot.onclick = function(e){ e.stopPropagation(); selectColor(idx); };
+      colorPop.appendChild(dot);
+    })(i);
+  }
+}
+function selectColor(idx){
+  penColorIdx = idx;
+  document.getElementById('penTool').style.borderColor = PEN_COLORS[idx];
+  document.getElementById('penLabel').textContent = PEN_COLOR_NAMES[idx];
+  colorPop.classList.remove('show');
+  buildColorPop();
+}
 function updateUndoBtn(){
   var btn = document.getElementById('btnUndo');
   btn.disabled = undoStack.length === 0;
@@ -205,23 +234,26 @@ function clearAllTools(){
   document.getElementById('eraserTool').className = 'pal-item eraser-tool';
   document.getElementById('btnDel').className = 'btn-del';
   document.getElementById('btnDel').textContent = '🗑 删除';
+  colorPop.classList.remove('show');
 }
 function toggleArrowTool(){
   clearAllTools();
   arrowMode = true;
   document.getElementById('arrowTool').className = 'pal-item arrow-tool active';
 }
-function togglePenTool(){
+function onPenClick(){
   if(penMode){
-    penColorIdx = (penColorIdx + 1) % PEN_COLORS.length;
-    document.getElementById('penLabel').textContent = PEN_COLOR_NAMES[penColorIdx];
-    document.getElementById('penTool').style.borderColor = PEN_COLORS[penColorIdx];
+    buildColorPop();
+    colorPop.classList.toggle('show');
   } else {
     clearAllTools();
     penMode = true;
     document.getElementById('penTool').className = 'pal-item pen-tool active';
     document.getElementById('penTool').style.borderColor = PEN_COLORS[penColorIdx];
     document.getElementById('penLabel').textContent = PEN_COLOR_NAMES[penColorIdx];
+    buildColorPop();
+    colorPop.classList.add('show');
+    setTimeout(function(){ colorPop.classList.remove('show'); }, 3000);
   }
 }
 function toggleEraserTool(){
@@ -296,6 +328,7 @@ function makeDraggable(obj){
   var el = obj.el;
   el.addEventListener('touchstart', function(e){
     if(e.touches.length > 1) return;
+    if(penMode || eraserMode) return;
     var t = e.touches[0];
     if(delMode){ handleDelete(obj); return; }
     if(arrowMode){ handleArrowClick(obj); return; }
@@ -308,6 +341,7 @@ function makeDraggable(obj){
     e.preventDefault();
   }, {passive:false});
   el.addEventListener('touchmove', function(e){
+    if(penMode || eraserMode) return;
     if(!dragEl || dragEl.id !== obj.id) return;
     var t = e.touches[0];
     var rect = canvas.getBoundingClientRect();
@@ -326,6 +360,7 @@ function makeDraggable(obj){
     if(dragEl){ dragEl.el.style.zIndex=20; dragEl=null; }
   });
   el.addEventListener('mousedown', function(e){
+    if(penMode || eraserMode) return;
     e.preventDefault();
     if(delMode){ handleDelete(obj); return; }
     if(arrowMode){ handleArrowClick(obj); return; }
@@ -337,6 +372,7 @@ function makeDraggable(obj){
     el.style.zIndex = 50;
   });
   el.addEventListener('mousemove', function(e){
+    if(penMode || eraserMode) return;
     if(!dragEl || dragEl.id !== obj.id) return;
     var rect = canvas.getBoundingClientRect();
     var px = e.clientX - rect.left - dragOffsetX;
@@ -441,6 +477,7 @@ function eraseAt(clientX, clientY){
 canvas.addEventListener('touchstart', function(e){
   if(penMode){
     e.preventDefault();
+    colorPop.classList.remove('show');
     var t = e.touches[0];
     startDraw(t.clientX, t.clientY);
   } else if(eraserMode){
@@ -464,7 +501,7 @@ canvas.addEventListener('touchend', function(e){
   if(penMode){ e.preventDefault(); endDraw(); }
 }, {passive:false});
 canvas.addEventListener('mousedown', function(e){
-  if(penMode){ e.preventDefault(); startDraw(e.clientX, e.clientY); }
+  if(penMode){ e.preventDefault(); colorPop.classList.remove('show'); startDraw(e.clientX, e.clientY); }
   else if(eraserMode){ e.preventDefault(); eraseAt(e.clientX, e.clientY); }
 });
 canvas.addEventListener('mousemove', function(e){
@@ -618,7 +655,7 @@ function doSubmit(){
     } catch(e) { onDone(''); }
   }
   if(typeof html2canvas === 'undefined'){
-    loadScript('https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js?v=11', proceed);
+    loadScript('https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js?v=12', proceed);
   } else { proceed(); }
 }
 window.addEventListener('resize', function(){ drawArrows(); });
