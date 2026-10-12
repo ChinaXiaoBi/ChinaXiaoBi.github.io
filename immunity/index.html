@@ -241,9 +241,7 @@ function clearAllTools(){
   document.getElementById('btnDel').textContent = '🗑 删除';
   colorPop.classList.remove('show');
 }
-function toggleSelectTool(){
-  clearAllTools();
-}
+function toggleSelectTool(){ clearAllTools(); }
 function toggleArrowTool(){
   clearAllTools();
   arrowMode = true;
@@ -339,7 +337,8 @@ function makeDraggable(obj){
   var el = obj.el;
   el.addEventListener('touchstart', function(e){
     if(e.touches.length > 1) return;
-    if(penMode || eraserMode) return;
+    if(eraserMode){ e.stopPropagation(); e.preventDefault(); return; }
+    if(penMode){ e.stopPropagation(); return; }
     var t = e.touches[0];
     if(delMode){ handleDelete(obj); return; }
     if(arrowMode){ handleArrowClick(obj); return; }
@@ -352,7 +351,7 @@ function makeDraggable(obj){
     e.preventDefault();
   }, {passive:false});
   el.addEventListener('touchmove', function(e){
-    if(penMode || eraserMode) return;
+    if(penMode || eraserMode){ e.stopPropagation(); return; }
     if(!dragEl || dragEl.id !== obj.id) return;
     var t = e.touches[0];
     var rect = canvas.getBoundingClientRect();
@@ -371,7 +370,7 @@ function makeDraggable(obj){
     if(dragEl){ dragEl.el.style.zIndex=20; dragEl=null; }
   });
   el.addEventListener('mousedown', function(e){
-    if(penMode || eraserMode) return;
+    if(eraserMode || penMode){ e.stopPropagation(); return; }
     e.preventDefault();
     if(delMode){ handleDelete(obj); return; }
     if(arrowMode){ handleArrowClick(obj); return; }
@@ -471,7 +470,7 @@ function endDraw(){
 }
 function eraseAt(clientX, clientY){
   var pt = getCanvasPoint(clientX, clientY);
-  var r = 25;
+  var r = 30;
   for(var i=strokes.length - 1; i >= 0; i--){
     var p = strokes[i].path;
     try{
@@ -603,6 +602,22 @@ function showSubmitModal(){
   setTimeout(function(){ document.getElementById('studentName').focus(); }, 100);
 }
 function closeSubmitModal(){ document.getElementById('submitModal').className='submit-modal'; }
+function uploadImg(blob, cb){
+  var fd = new FormData();
+  fd.append('reqtype', 'fileupload');
+  fd.append('time', '24h');
+  fd.append('fileToUpload', blob, 'model.jpg');
+  var up = new XMLHttpRequest();
+  up.open('POST', 'https://litterbox.catbox.moe/resources/internals/api.php', true);
+  up.timeout = 25000;
+  up.onload = function(){
+    if(up.status === 200 && up.responseText.indexOf('http') === 0){ cb(up.responseText.trim()); }
+    else { cb(''); }
+  };
+  up.onerror = function(){ cb(''); };
+  up.ontimeout = function(){ cb(''); };
+  up.send(fd);
+}
 function doSubmit(){
   var name = document.getElementById('studentName').value.trim();
   if(!name){ alert('请输入你的姓名'); return; }
@@ -643,30 +658,16 @@ function doSubmit(){
   }
   function proceed(){
     try {
-      html2canvas(canvas, {backgroundColor:'#ffffff', scale:2, useCORS:true, logging:false}).then(function(canvasImg){
+      html2canvas(canvas, {backgroundColor:'#ffffff', scale:1.5, useCORS:true, logging:false}).then(function(canvasImg){
         btn.textContent = '上传图片...';
         canvasImg.toBlob(function(blob){
-          var fd = new FormData();
-          fd.append('reqtype', 'fileupload');
-          fd.append('time', '24h');
-          fd.append('fileToUpload', blob, 'model.png');
-          var up = new XMLHttpRequest();
-          up.open('POST', 'https://litterbox.catbox.moe/resources/internals/api.php', true);
-          up.timeout = 20000;
-          up.onload = function(){
-            var url = '';
-            if(up.status === 200 && up.responseText.indexOf('http') === 0) url = up.responseText.trim();
-            onDone(url);
-          };
-          up.onerror = function(){ onDone(''); };
-          up.ontimeout = function(){ onDone(''); };
-          up.send(fd);
-        }, 'image/png');
+          uploadImg(blob, function(url){ onDone(url); });
+        }, 'image/jpeg', 0.7);
       }).catch(function(e){ onDone(''); });
     } catch(e) { onDone(''); }
   }
   if(typeof html2canvas === 'undefined'){
-    loadScript('https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js?v=13', proceed);
+    loadScript('https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js?v=14', proceed);
   } else { proceed(); }
 }
 window.addEventListener('resize', function(){ drawArrows(); });
