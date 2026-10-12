@@ -25,6 +25,8 @@ body{display:flex;flex-direction:column;touch-action:manipulation}
 .pal-item.pen-tool.active{outline:3px solid #e74c3c;background:#fadbd8}
 .pal-item.eraser-tool{border-color:#7f8c8d;background:#f4f6f6}
 .pal-item.eraser-tool.active{outline:3px solid #7f8c8d;background:#e5e8e8}
+.pal-item.select-tool{border-color:#2c5f2d;background:#eef5ee}
+.pal-item.select-tool.active{outline:3px solid #2c5f2d;background:#d5e8d5}
 .canvas{flex:1;position:relative;overflow:hidden;background:#fff;background-image:radial-gradient(circle,#dde5d5 1px,transparent 1px);background-size:18px 18px;touch-action:none}
 .placed{position:absolute;cursor:grab;user-select:none;-webkit-user-select:none;display:flex;flex-direction:column;align-items:center;z-index:20;transform:translateX(-50%);will-change:left,top;touch-action:none}
 .placed.arrow-source{outline:3px solid #2980b9;outline-offset:2px;border-radius:10px;z-index:50}
@@ -105,6 +107,7 @@ body{display:flex;flex-direction:column;touch-action:manipulation}
 </div>
 <div class="main">
   <div class="palette" id="palette">
+    <div class="pal-item select-tool active" id="selectTool" onclick="toggleSelectTool()"><span class="pic" style="font-size:20px">🖱️</span>选择</div>
     <div class="pal-item" data-type="virus" onclick="onPalClick(this)"><span class="pic"><div class="virus-body"></div></span>诺如病毒</div>
     <div class="pal-item" data-type="apc" onclick="onPalClick(this)"><span class="pic"><div class="apc-body"></div></span>抗原呈递细胞</div>
     <div class="pal-item" data-type="helperT" onclick="onPalClick(this)"><span class="pic"><div class="helper-body"></div></span>辅助性T细胞</div>
@@ -183,6 +186,7 @@ var svg = document.getElementById('arrowSvg');
 var drawSvg = document.getElementById('drawSvg');
 var rafPending = false;
 var colorPop = document.getElementById('colorPop');
+var selectTool = document.getElementById('selectTool');
 function buildColorPop(){
   colorPop.innerHTML = '';
   for(var i=0; i<PEN_COLORS.length; i++){
@@ -229,6 +233,7 @@ function clearAllTools(){
   arrowMode = false; arrowSource = null;
   penMode = false; eraserMode = false;
   delMode = false;
+  selectTool.className = 'pal-item select-tool active';
   document.getElementById('arrowTool').className = 'pal-item arrow-tool';
   document.getElementById('penTool').className = 'pal-item pen-tool';
   document.getElementById('eraserTool').className = 'pal-item eraser-tool';
@@ -236,9 +241,13 @@ function clearAllTools(){
   document.getElementById('btnDel').textContent = '🗑 删除';
   colorPop.classList.remove('show');
 }
+function toggleSelectTool(){
+  clearAllTools();
+}
 function toggleArrowTool(){
   clearAllTools();
   arrowMode = true;
+  selectTool.className = 'pal-item select-tool';
   document.getElementById('arrowTool').className = 'pal-item arrow-tool active';
 }
 function onPenClick(){
@@ -248,6 +257,7 @@ function onPenClick(){
   } else {
     clearAllTools();
     penMode = true;
+    selectTool.className = 'pal-item select-tool';
     document.getElementById('penTool').className = 'pal-item pen-tool active';
     document.getElementById('penTool').style.borderColor = PEN_COLORS[penColorIdx];
     document.getElementById('penLabel').textContent = PEN_COLOR_NAMES[penColorIdx];
@@ -259,6 +269,7 @@ function onPenClick(){
 function toggleEraserTool(){
   clearAllTools();
   eraserMode = true;
+  selectTool.className = 'pal-item select-tool';
   document.getElementById('eraserTool').className = 'pal-item eraser-tool active';
 }
 function addElement(type, xPct, yPct){
@@ -655,7 +666,7 @@ function doSubmit(){
     } catch(e) { onDone(''); }
   }
   if(typeof html2canvas === 'undefined'){
-    loadScript('https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js?v=12', proceed);
+    loadScript('https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js?v=13', proceed);
   } else { proceed(); }
 }
 window.addEventListener('resize', function(){ drawArrows(); });
