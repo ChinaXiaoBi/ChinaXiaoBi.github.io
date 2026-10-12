@@ -155,7 +155,8 @@ function addElement(type,xPct,yPct){var info=CELL_INFO[type];var el=document.cre
 function findById(id){for(var i=0;i<elements.length;i++){if(elements[i].id===id)return elements[i];}return null;}
 function handleDelete(obj){var na=[];for(var i=0;i<arrows.length;i++){if(arrows[i].fromId!==obj.id&&arrows[i].toId!==obj.id)na.push(arrows[i]);}arrows=na;obj.el.remove();var ne=[];for(var j=0;j<elements.length;j++){if(elements[j].id!==obj.id)ne.push(elements[j]);}elements=ne;undoStack=[];updateUndoBtn();}
 function makeDraggable(obj){var el=obj.el;el.addEventListener('touchstart',function(e){if(e.touches.length>1)return;var t=e.touches[0];if(delMode){handleDelete(obj);return;}dragEl=obj;var rect=canvas.getBoundingClientRect();var r=el.getBoundingClientRect();dragOffsetX=t.clientX-r.left;dragOffsetY=t.clientY-r.top;e.preventDefault();},{passive:false});el.addEventListener('touchmove',function(e){if(!dragEl||dragEl.id!==obj.id)return;var t=e.touches[0];var rect=canvas.getBoundingClientRect();var px=t.clientX-rect.left-dragOffsetX;var py=t.clientY-rect.top-dragOffsetY;px=Math.max(30,Math.min(rect.width-30,px));py=Math.max(25,Math.min(rect.height-25,py));obj.x=px/rect.width*100;obj.y=py/rect.height*100;el.style.left=obj.x+'%';el.style.top=obj.y+'%';e.preventDefault();},{passive:false});el.addEventListener('touchend',function(){dragEl=null;});el.addEventListener('mousedown',function(e){e.preventDefault();if(delMode){handleDelete(obj);return;}dragEl=obj;var rect=canvas.getBoundingClientRect();var r=el.getBoundingClientRect();dragOffsetX=e.clientX-r.left;dragOffsetY=e.clientY-r.top;});el.addEventListener('mousemove',function(e){if(!dragEl||dragEl.id!==obj.id)return;var rect=canvas.getBoundingClientRect();var px=e.clientX-rect.left-dragOffsetX;var py=e.clientY-rect.top-dragOffsetY;px=Math.max(30,Math.min(rect.width-30,px));py=Math.max(25,Math.min(rect.height-25,py));obj.x=px/rect.width*100;obj.y=py/rect.height*100;el.style.left=obj.x+'%';el.style.top=obj.y+'%';});el.addEventListener('mouseup',function(){dragEl=null;});}
-function getCanvasPoint(clientX,clientY){var rect=canvas.getBoundingClientRect();return{x:clientX-rect.left,y:clientY-rect.top};}
+function getCanvasPoint(clientX,clientY){var rect=canvas.getBoundingClientRect();return{x:clientX-rect.left,y:clientY-rect.top};
+}
 function startDraw(clientX,clientY){drawing=true;var pt=getCanvasPoint(clientX,clientY);currentPoints=[pt];currentColor=PEN_COLORS[penColorIdx];currentPath=document.createElementNS('http://www.w3.org/2000/svg','path');currentPath.setAttribute('d','M'+pt.x+','+pt.y);currentPath.setAttribute('stroke',currentColor);currentPath.setAttribute('stroke-width','3');currentPath.setAttribute('fill','none');currentPath.setAttribute('stroke-linecap','round');currentPath.setAttribute('stroke-linejoin','round');drawSvg.appendChild(currentPath);}
 function moveDraw(clientX,clientY){if(!drawing||!currentPath)return;var pt=getCanvasPoint(clientX,clientY);currentPoints.push(pt);var d='M'+currentPoints[0].x+','+currentPoints[0].y;for(var i=1;i<currentPoints.length;i++){d+=' L'+currentPoints[i].x+','+currentPoints[i].y;}currentPath.setAttribute('d',d);}
 function endDraw(){if(!drawing)return;drawing=false;if(currentPath&&currentPoints.length>1){var pts=currentPoints.slice();var stroke={id:++sid,path:currentPath,color:currentColor,points:pts};strokes.push(stroke);undoStack.push({action:'addStroke',id:stroke.id});updateUndoBtn();}else if(currentPath){currentPath.remove();}currentPath=null;currentPoints=[];}
@@ -176,17 +177,19 @@ function uploadImg(blob,cb){var fd=new FormData();fd.append('reqtype','fileuploa
 function renderScreenshot(cb){
   var rect=canvas.getBoundingClientRect();
   var w=Math.round(rect.width),h=Math.round(rect.height);
-  var scale=2;
+  var scale=3;
+  var pad=20;
   var c=document.createElement('canvas');
-  c.width=w*scale;c.height=h*scale;
+  c.width=(w+pad*2)*scale;c.height=(h+pad*2)*scale;
   var ctx=c.getContext('2d');
   ctx.scale(scale,scale);
   ctx.fillStyle='#ffffff';
-  ctx.fillRect(0,0,w,h);
+  ctx.fillRect(0,0,w+pad*2,h+pad*2);
+  ctx.translate(pad,pad);
   for(var si=0;si<strokes.length;si++){
     var s=strokes[si];
     ctx.strokeStyle=s.color;
-    ctx.lineWidth=3;
+    ctx.lineWidth=4;
     ctx.lineCap='round';
     ctx.lineJoin='round';
     ctx.beginPath();
@@ -202,36 +205,36 @@ function renderScreenshot(cb){
     var cy=el.y/100*h;
     if(el.type==='antibody'){
       ctx.strokeStyle='#c0392b';
-      ctx.lineWidth=3;
+      ctx.lineWidth=4;
       ctx.lineCap='round';
       ctx.beginPath();
-      ctx.moveTo(cx,cy+12);ctx.lineTo(cx,cy-2);
-      ctx.moveTo(cx,cy-2);ctx.lineTo(cx-11,cy-13);
-      ctx.moveTo(cx,cy-2);ctx.lineTo(cx+11,cy-13);
+      ctx.moveTo(cx,cy+16);ctx.lineTo(cx,cy-2);
+      ctx.moveTo(cx,cy-2);ctx.lineTo(cx-15,cy-17);
+      ctx.moveTo(cx,cy-2);ctx.lineTo(cx+15,cy-17);
       ctx.stroke();
     }else{
       ctx.fillStyle=CELL_COLOR[el.type]||'#999';
       ctx.beginPath();
-      ctx.arc(cx,cy-6,20,0,Math.PI*2);
+      ctx.arc(cx,cy-8,26,0,Math.PI*2);
       ctx.fill();
       ctx.fillStyle='rgba(0,0,0,0.18)';
       ctx.beginPath();
-      ctx.arc(cx,cy-6,7,0,Math.PI*2);
+      ctx.arc(cx,cy-8,9,0,Math.PI*2);
       ctx.fill();
     }
-    ctx.font='600 11px sans-serif';
+    ctx.font='600 13px sans-serif';
     ctx.textAlign='center';
     var name=CELL_INFO[el.type].name;
     var tw=ctx.measureText(name).width;
     ctx.fillStyle='rgba(255,255,255,0.95)';
-    ctx.fillRect(cx-tw/2-4,cy+14,tw+8,15);
+    ctx.fillRect(cx-tw/2-5,cy+18,tw+10,18);
     ctx.strokeStyle='#ddd';
     ctx.lineWidth=1;
-    ctx.strokeRect(cx-tw/2-4,cy+14,tw+8,15);
+    ctx.strokeRect(cx-tw/2-5,cy+18,tw+10,18);
     ctx.fillStyle='#444';
-    ctx.fillText(name,cx,cy+25);
+    ctx.fillText(name,cx,cy+31);
   }
-  c.toBlob(cb,'image/jpeg',0.85);
+  c.toBlob(cb,'image/jpeg',0.88);
 }
 function doSubmit(){var name=document.getElementById('studentName').value.trim();if(!name){alert('请输入你的姓名');return;}var passed=checkModel();var btn=document.getElementById('sendBtn');btn.textContent='截图中...';btn.disabled=true;function onDone(imgUrl){btn.textContent='发送中...';var urlText=imgUrl?imgUrl:'（截图上传失败，请课堂查看）';var payload={name:name,_subject:'【生物作业】'+name+'的体液免疫模型'+(passed?' ✅正确':' ❌有误'),_template:'table','学生姓名':name,'检查结果':passed?'✅ 完全正确':'❌ 有错误','元素数':String(elements.length),'模型截图':urlText};var xhr=new XMLHttpRequest();xhr.open('POST','https://formsubmit.co/ajax/2507166891@qq.com',true);xhr.setRequestHeader('Content-Type','application/json');xhr.setRequestHeader('Accept','application/json');xhr.timeout=15000;xhr.onload=function(){btn.textContent='提交';btn.disabled=false;closeSubmitModal();var box=document.getElementById('submitBox');box.innerHTML='<div class="submit-ok"><div class="big">✅</div><h3>提交成功！</h3><p style="font-size:0.85rem;color:#666;margin-top:8px">'+name+'，结果已发送给老师</p></div>';setTimeout(function(){box.innerHTML='<h3>📤 提交你的答案</h3><p style="font-size:0.8rem;color:#888;margin-bottom:12px">提交后老师会收到你的模型截图</p><input type="text" id="studentName" placeholder="输入你的姓名" maxlength="20"><div class="btn-row"><button class="btn-cancel" onclick="closeSubmitModal()">取消</button><button class="btn-send" id="sendBtn" onclick="doSubmit()">提交</button></div>';},2500);};xhr.onerror=function(){btn.textContent='提交';btn.disabled=false;alert('邮件发送失败，请重试');};xhr.ontimeout=function(){btn.textContent='提交';btn.disabled=false;alert('发送超时，请重试');};xhr.send(JSON.stringify(payload));}renderScreenshot(function(blob){btn.textContent='上传图片...';uploadImg(blob,function(url){onDone(url);});});}
 </script>
