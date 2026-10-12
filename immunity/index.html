@@ -3,8 +3,6 @@
 <head>
 <meta charset="UTF-8">
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-<meta http-equiv="Pragma" content="no-cache">
-<meta http-equiv="Expires" content="0">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <title>体液免疫交互模型</title>
 <style>
@@ -21,10 +19,7 @@ body{display:flex;flex-direction:column;touch-action:manipulation}
 .pal-item .pic{width:28px;height:28px;flex-shrink:0;display:flex;align-items:center;justify-content:center}
 .pal-item.arrow-tool{border-color:#2980b9;background:#eaf2f8}
 .pal-item.arrow-tool.active{outline:3px solid #2980b9;background:#d4e6f1}
-.pal-item.pen-tool{border-color:#e74c3c;background:#fdf0ef}
-.pal-item.pen-tool.active{outline:3px solid #e74c3c;background:#fadbd8}
-.pal-item.eraser-tool{border-color:#7f8c8d;background:#f4f6f6}
-.pal-item.eraser-tool.active{outline:3px solid #7f8c8d;background:#e5e8e8}
+.pal-item.pen-tool.active{outline:3px solid #e74c3c;background:#fdf0ef}
 .pal-item.select-tool{border-color:#2c5f2d;background:#eef5ee}
 .pal-item.select-tool.active{outline:3px solid #2c5f2d;background:#d5e8d5}
 .canvas{flex:1;position:relative;overflow:hidden;background:#fff;background-image:radial-gradient(circle,#dde5d5 1px,transparent 1px);background-size:18px 18px;touch-action:none}
@@ -48,7 +43,7 @@ body{display:flex;flex-direction:column;touch-action:manipulation}
 .antibody-body{display:flex;align-items:center;justify-content:center}
 .arrow-tool-body{font-size:22px;line-height:1;color:#2980b9}
 .arrow-svg{position:absolute;top:0;left:0;pointer-events:none;z-index:10;overflow:visible}
-.draw-svg{position:absolute;top:0;left:0;z-index:15;overflow:visible;touch-action:none}
+.draw-svg{position:absolute;top:0;left:0;z-index:15;overflow:visible;touch-action:none;pointer-events:none}
 .draw-svg path{pointer-events:none}
 .controls{padding:5px 8px;background:#f7f9f4;border-top:2px solid #d8e0d0;display:flex;gap:5px;justify-content:center;flex-shrink:0;flex-wrap:wrap}
 .controls button{padding:7px 13px;border:none;border-radius:16px;font-size:0.78rem;cursor:pointer;font-weight:600}
@@ -65,9 +60,6 @@ body{display:flex;flex-direction:column;touch-action:manipulation}
 .feedback h4{font-size:0.9rem;margin-bottom:5px}
 .feedback ul{padding-left:16px;font-size:0.78rem;line-height:1.6;color:#555}
 .feedback .close-fb{float:right;cursor:pointer;font-size:1.1rem;color:#999;padding:0 4px;line-height:1}
-.rotate-tip{position:fixed;bottom:60px;left:50%;transform:translateX(-50%);background:rgba(44,95,45,0.9);color:#fff;padding:6px 14px;border-radius:16px;font-size:0.72rem;z-index:99;display:none}
-.rotate-tip.show{display:block;animation:fadeIn 0.5s}
-@keyframes fadeIn{from{opacity:0}to{opacity:1}}
 .submit-modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:200;align-items:center;justify-content:center}
 .submit-modal.show{display:flex}
 .submit-box{background:#fff;border-radius:14px;padding:20px;width:90%;max-width:340px;text-align:center}
@@ -82,8 +74,8 @@ body{display:flex;flex-direction:column;touch-action:manipulation}
 .submit-ok{text-align:center;padding:20px}
 .submit-ok .big{font-size:48px;margin-bottom:10px}
 .color-pop{position:absolute;bottom:calc(100% + 6px);left:50%;transform:translateX(-50%);background:#fff;border-radius:12px;box-shadow:0 4px 20px rgba(0,0,0,0.2);padding:8px;display:none;z-index:200;white-space:nowrap}
-.color-pop.show{display:flex;gap:6px}
-.color-dot{width:26px;height:26px;border-radius:50%;cursor:pointer;border:3px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,0.3);flex-shrink:0}
+.color-pop.show{display:flex;gap:8px}
+.color-dot{width:28px;height:28px;border-radius:50%;cursor:pointer;border:3px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,0.3);flex-shrink:0}
 .color-dot:active{transform:scale(1.2)}
 .color-dot.selected{outline:3px solid #333;outline-offset:1px}
 @media(min-width:500px) and (orientation:landscape){
@@ -116,11 +108,10 @@ body{display:flex;flex-direction:column;touch-action:manipulation}
     <div class="pal-item" data-type="memory" onclick="onPalClick(this)"><span class="pic"><div class="memory-body"></div></span>记忆B细胞</div>
     <div class="pal-item" data-type="antibody" onclick="onPalClick(this)"><span class="pic"><div class="antibody-body"><svg viewBox="0 0 40 40" width="24" height="24"><path d="M20 35 L20 20 M20 20 L8 8 M20 20 L32 8" stroke="#c0392b" stroke-width="4" stroke-linecap="round" fill="none"/></svg></div></span>抗体</div>
     <div class="pal-item arrow-tool" id="arrowTool" onclick="toggleArrowTool()"><span class="pic"><div class="arrow-tool-body">↗</div></span>箭头</div>
-    <div class="pal-item pen-tool" id="penTool" onclick="onPenClick()">
+    <div class="pal-item pen-tool" id="penTool" onclick="onPenClick(event)">
       <span class="pic" style="font-size:20px">🖊️</span><span id="penLabel">画笔</span>
       <div class="color-pop" id="colorPop"></div>
     </div>
-    <div class="pal-item eraser-tool" id="eraserTool" onclick="toggleEraserTool()"><span class="pic" style="font-size:20px">🧽</span>橡皮</div>
   </div>
   <div class="canvas" id="canvas">
     <svg class="arrow-svg" id="arrowSvg"></svg>
@@ -134,11 +125,10 @@ body{display:flex;flex-direction:column;touch-action:manipulation}
 </div>
 <div class="controls">
   <button class="btn-undo" id="btnUndo" onclick="undoLast()">↩️ 撤回</button>
-  <button class="btn-del" id="btnDel" onclick="toggleDel()">🗑 删除</button>
+  <button class="btn-del" id="btnDel" onclick="toggleDel()">🧽 擦除模型</button>
   <button class="btn-reset" onclick="resetAll()">🔄 重置</button>
   <button class="btn-submit" onclick="showSubmitModal()">📤 提交答案</button>
 </div>
-<div class="rotate-tip" id="rotateTip">💡 横屏使用效果更佳</div>
 <div class="submit-modal" id="submitModal">
   <div class="submit-box" id="submitBox">
     <h3>📤 提交你的答案</h3>
@@ -152,13 +142,13 @@ body{display:flex;flex-direction:column;touch-action:manipulation}
 </div>
 <script>
 var CELL_INFO = {
-  virus:{name:'诺如病毒',cls:'virus-body',html:''},
-  apc:{name:'抗原呈递细胞',cls:'apc-body',html:''},
-  helperT:{name:'辅助性T细胞',cls:'helper-body',html:''},
-  bcell:{name:'B细胞',cls:'bcell-body',html:''},
-  plasma:{name:'浆细胞',cls:'plasma-body',html:''},
-  memory:{name:'记忆B细胞',cls:'memory-body',html:''},
-  antibody:{name:'抗体',cls:'antibody-body',html:'<svg viewBox="0 0 40 40" width="32" height="32"><path d="M20 35 L20 20 M20 20 L8 8 M20 20 L32 8" stroke="#c0392b" stroke-width="4" stroke-linecap="round" fill="none"/></svg>'}
+  virus:{name:'诺如病毒',cls:'virus-body'},
+  apc:{name:'抗原呈递细胞',cls:'apc-body'},
+  helperT:{name:'辅助性T细胞',cls:'helper-body'},
+  bcell:{name:'B细胞',cls:'bcell-body'},
+  plasma:{name:'浆细胞',cls:'plasma-body'},
+  memory:{name:'记忆B细胞',cls:'memory-body'},
+  antibody:{name:'抗体',cls:'antibody-body'}
 };
 var TARGETS = {
   virus:{x:10,y:55}, apc:{x:27,y:55}, helperT:{x:44,y:22},
@@ -168,25 +158,27 @@ var REQUIRED_ARROWS = [
   {from:'virus',to:'apc'},{from:'apc',to:'helperT'},{from:'helperT',to:'bcell'},
   {from:'bcell',to:'plasma'},{from:'bcell',to:'memory'},{from:'plasma',to:'antibody'}
 ];
-var PEN_COLORS = ['#e74c3c','#2980b9','#27ae60','#2c3e50','#e67e22','#8e44ad','#f1c40f','#ffffff'];
-var PEN_COLOR_NAMES = ['红','蓝','绿','黑','橙','紫','黄','白'];
+var PEN_COLORS = ['#e74c3c','#2c3e50','#2980b9','#27ae60'];
+var PEN_COLOR_NAMES = ['红','黑','蓝','绿'];
 var elements = [];
 var arrows = [];
 var undoStack = [];
 var strokes = [];
 var dragEl = null, dragOffsetX = 0, dragOffsetY = 0;
 var delMode = false, arrowMode = false, arrowSource = null;
-var penMode = false, eraserMode = false;
+var penMode = false;
 var penColorIdx = 0;
 var drawing = false, currentPath = null, currentPoints = [];
-var eid = 0;
-var sid = 0;
+var eid = 0, sid = 0;
 var canvas = document.getElementById('canvas');
 var svg = document.getElementById('arrowSvg');
 var drawSvg = document.getElementById('drawSvg');
 var rafPending = false;
 var colorPop = document.getElementById('colorPop');
 var selectTool = document.getElementById('selectTool');
+var penTool = document.getElementById('penTool');
+var arrowTool = document.getElementById('arrowTool');
+var btnDel = document.getElementById('btnDel');
 function buildColorPop(){
   colorPop.innerHTML = '';
   for(var i=0; i<PEN_COLORS.length; i++){
@@ -194,7 +186,6 @@ function buildColorPop(){
       var dot = document.createElement('div');
       dot.className = 'color-dot' + (idx === penColorIdx ? ' selected' : '');
       dot.style.background = PEN_COLORS[idx];
-      if(idx === 7) dot.style.boxShadow = '0 0 0 2px #ccc, 0 1px 4px rgba(0,0,0,0.3)';
       dot.onclick = function(e){ e.stopPropagation(); selectColor(idx); };
       colorPop.appendChild(dot);
     })(i);
@@ -202,14 +193,12 @@ function buildColorPop(){
 }
 function selectColor(idx){
   penColorIdx = idx;
-  document.getElementById('penTool').style.borderColor = PEN_COLORS[idx];
   document.getElementById('penLabel').textContent = PEN_COLOR_NAMES[idx];
   colorPop.classList.remove('show');
   buildColorPop();
 }
 function updateUndoBtn(){
-  var btn = document.getElementById('btnUndo');
-  btn.disabled = undoStack.length === 0;
+  document.getElementById('btnUndo').disabled = undoStack.length === 0;
 }
 function loadScript(src, cb){
   var s = document.createElement('script');
@@ -217,64 +206,59 @@ function loadScript(src, cb){
   s.onerror = function(){ alert('截图组件加载失败，请检查网络'); };
   document.head.appendChild(s);
 }
-function isPortrait(){ return window.innerHeight > window.innerWidth; }
-if(isPortrait()){
-  setTimeout(function(){
-    var rt = document.getElementById('rotateTip');
-    rt.className = 'rotate-tip show';
-    setTimeout(function(){ rt.className = 'rotate-tip'; }, 4000);
-  }, 1500);
-}
 function onPalClick(item){
+  if(penMode) return;
   var type = item.getAttribute('data-type');
-  if(type) addElement(type, 35 + Math.random()*20, 30 + Math.random()*30);
+  if(type) addElement(type, 30 + Math.random()*25, 30 + Math.random()*30);
 }
 function clearAllTools(){
   arrowMode = false; arrowSource = null;
-  penMode = false; eraserMode = false;
+  penMode = false;
   delMode = false;
   selectTool.className = 'pal-item select-tool active';
-  document.getElementById('arrowTool').className = 'pal-item arrow-tool';
-  document.getElementById('penTool').className = 'pal-item pen-tool';
-  document.getElementById('eraserTool').className = 'pal-item eraser-tool';
-  document.getElementById('btnDel').className = 'btn-del';
-  document.getElementById('btnDel').textContent = '🗑 删除';
+  arrowTool.className = 'pal-item arrow-tool';
+  penTool.className = 'pal-item pen-tool';
+  btnDel.className = 'btn-del';
+  btnDel.textContent = '🧽 擦除模型';
   colorPop.classList.remove('show');
 }
 function toggleSelectTool(){ clearAllTools(); }
 function toggleArrowTool(){
+  if(arrowMode){ clearAllTools(); return; }
   clearAllTools();
   arrowMode = true;
   selectTool.className = 'pal-item select-tool';
-  document.getElementById('arrowTool').className = 'pal-item arrow-tool active';
+  arrowTool.className = 'pal-item arrow-tool active';
 }
-function onPenClick(){
+function onPenClick(ev){
+  if(ev) ev.stopPropagation();
   if(penMode){
     buildColorPop();
     colorPop.classList.toggle('show');
-  } else {
-    clearAllTools();
-    penMode = true;
-    selectTool.className = 'pal-item select-tool';
-    document.getElementById('penTool').className = 'pal-item pen-tool active';
-    document.getElementById('penTool').style.borderColor = PEN_COLORS[penColorIdx];
-    document.getElementById('penLabel').textContent = PEN_COLOR_NAMES[penColorIdx];
-    buildColorPop();
-    colorPop.classList.add('show');
-    setTimeout(function(){ colorPop.classList.remove('show'); }, 3000);
+    return;
   }
-}
-function toggleEraserTool(){
   clearAllTools();
-  eraserMode = true;
+  penMode = true;
   selectTool.className = 'pal-item select-tool';
-  document.getElementById('eraserTool').className = 'pal-item eraser-tool active';
+  penTool.className = 'pal-item pen-tool active';
+  document.getElementById('penLabel').textContent = PEN_COLOR_NAMES[penColorIdx];
+  buildColorPop();
+  colorPop.classList.add('show');
+  setTimeout(function(){ colorPop.classList.remove('show'); }, 4000);
+}
+function toggleDel(){
+  if(delMode){ clearAllTools(); return; }
+  clearAllTools();
+  delMode = true;
+  btnDel.className = 'btn-del active';
+  btnDel.textContent = '✅ 退出擦除';
 }
 function addElement(type, xPct, yPct){
   var info = CELL_INFO[type];
   var el = document.createElement('div');
   el.className = 'placed';
-  el.innerHTML = '<div class="cell"><div class="' + info.cls + '">' + info.html + '</div></div><div class="name">' + info.name + '</div>';
+  var innerSvg = type==='antibody' ? '<svg viewBox="0 0 40 40" width="32" height="32"><path d="M20 35 L20 20 M20 20 L8 8 M20 20 L32 8" stroke="#c0392b" stroke-width="4" stroke-linecap="round" fill="none"/></svg>' : '';
+  el.innerHTML = '<div class="cell"><div class="' + info.cls + '">' + innerSvg + '</div></div><div class="name">' + info.name + '</div>';
   el.style.left = xPct + '%'; el.style.top = yPct + '%';
   canvas.appendChild(el);
   var obj = {id: ++eid, type: type, el: el, x: xPct, y: yPct, lineEl: null};
@@ -333,72 +317,6 @@ function findById(id){
 function clearArrowSourceHighlight(){
   for(var i=0; i<elements.length; i++){ elements[i].el.classList.remove('arrow-source'); }
 }
-function makeDraggable(obj){
-  var el = obj.el;
-  el.addEventListener('touchstart', function(e){
-    if(e.touches.length > 1) return;
-    if(eraserMode){ e.stopPropagation(); e.preventDefault(); return; }
-    if(penMode){ e.stopPropagation(); return; }
-    var t = e.touches[0];
-    if(delMode){ handleDelete(obj); return; }
-    if(arrowMode){ handleArrowClick(obj); return; }
-    dragEl = obj;
-    var rect = canvas.getBoundingClientRect();
-    var r = el.getBoundingClientRect();
-    dragOffsetX = t.clientX - r.left;
-    dragOffsetY = t.clientY - r.top;
-    el.style.zIndex = 50;
-    e.preventDefault();
-  }, {passive:false});
-  el.addEventListener('touchmove', function(e){
-    if(penMode || eraserMode){ e.stopPropagation(); return; }
-    if(!dragEl || dragEl.id !== obj.id) return;
-    var t = e.touches[0];
-    var rect = canvas.getBoundingClientRect();
-    var px = t.clientX - rect.left - dragOffsetX;
-    var py = t.clientY - rect.top - dragOffsetY;
-    px = Math.max(20, Math.min(rect.width - 20, px));
-    py = Math.max(20, Math.min(rect.height - 20, py));
-    obj.x = px / rect.width * 100;
-    obj.y = py / rect.height * 100;
-    el.style.left = obj.x + '%';
-    el.style.top = obj.y + '%';
-    updateArrowsFast();
-    e.preventDefault();
-  }, {passive:false});
-  el.addEventListener('touchend', function(){
-    if(dragEl){ dragEl.el.style.zIndex=20; dragEl=null; }
-  });
-  el.addEventListener('mousedown', function(e){
-    if(eraserMode || penMode){ e.stopPropagation(); return; }
-    e.preventDefault();
-    if(delMode){ handleDelete(obj); return; }
-    if(arrowMode){ handleArrowClick(obj); return; }
-    dragEl = obj;
-    var rect = canvas.getBoundingClientRect();
-    var r = el.getBoundingClientRect();
-    dragOffsetX = e.clientX - r.left;
-    dragOffsetY = e.clientY - r.top;
-    el.style.zIndex = 50;
-  });
-  el.addEventListener('mousemove', function(e){
-    if(penMode || eraserMode) return;
-    if(!dragEl || dragEl.id !== obj.id) return;
-    var rect = canvas.getBoundingClientRect();
-    var px = e.clientX - rect.left - dragOffsetX;
-    var py = e.clientY - rect.top - dragOffsetY;
-    px = Math.max(20, Math.min(rect.width - 20, px));
-    py = Math.max(20, Math.min(rect.height - 20, py));
-    obj.x = px / rect.width * 100;
-    obj.y = py / rect.height * 100;
-    el.style.left = obj.x + '%';
-    el.style.top = obj.y + '%';
-    updateArrowsFast();
-  });
-  el.addEventListener('mouseup', function(){
-    if(dragEl){ dragEl.el.style.zIndex=20; dragEl=null; }
-  });
-}
 function handleDelete(obj){
   var na = [];
   for(var i=0; i<arrows.length; i++){ if(arrows[i].fromId!==obj.id && arrows[i].toId!==obj.id) na.push(arrows[i]); }
@@ -426,6 +344,71 @@ function handleArrowClick(obj){
     arrowSource = null;
     drawArrows();
   }
+}
+function makeDraggable(obj){
+  var el = obj.el;
+  el.addEventListener('touchstart', function(e){
+    if(e.touches.length > 1) return;
+    if(penMode){ e.stopPropagation(); return; }
+    var t = e.touches[0];
+    if(delMode){ handleDelete(obj); return; }
+    if(arrowMode){ handleArrowClick(obj); return; }
+    dragEl = obj;
+    var rect = canvas.getBoundingClientRect();
+    var r = el.getBoundingClientRect();
+    dragOffsetX = t.clientX - r.left;
+    dragOffsetY = t.clientY - r.top;
+    el.style.zIndex = 50;
+    e.preventDefault();
+  }, {passive:false});
+  el.addEventListener('touchmove', function(e){
+    if(penMode){ e.stopPropagation(); return; }
+    if(!dragEl || dragEl.id !== obj.id) return;
+    var t = e.touches[0];
+    var rect = canvas.getBoundingClientRect();
+    var px = t.clientX - rect.left - dragOffsetX;
+    var py = t.clientY - rect.top - dragOffsetY;
+    px = Math.max(20, Math.min(rect.width - 20, px));
+    py = Math.max(20, Math.min(rect.height - 20, py));
+    obj.x = px / rect.width * 100;
+    obj.y = py / rect.height * 100;
+    el.style.left = obj.x + '%';
+    el.style.top = obj.y + '%';
+    updateArrowsFast();
+    e.preventDefault();
+  }, {passive:false});
+  el.addEventListener('touchend', function(){
+    if(dragEl){ dragEl.el.style.zIndex=20; dragEl=null; }
+  });
+  el.addEventListener('mousedown', function(e){
+    if(penMode){ e.stopPropagation(); return; }
+    e.preventDefault();
+    if(delMode){ handleDelete(obj); return; }
+    if(arrowMode){ handleArrowClick(obj); return; }
+    dragEl = obj;
+    var rect = canvas.getBoundingClientRect();
+    var r = el.getBoundingClientRect();
+    dragOffsetX = e.clientX - r.left;
+    dragOffsetY = e.clientY - r.top;
+    el.style.zIndex = 50;
+  });
+  el.addEventListener('mousemove', function(e){
+    if(penMode) return;
+    if(!dragEl || dragEl.id !== obj.id) return;
+    var rect = canvas.getBoundingClientRect();
+    var px = e.clientX - rect.left - dragOffsetX;
+    var py = e.clientY - rect.top - dragOffsetY;
+    px = Math.max(20, Math.min(rect.width - 20, px));
+    py = Math.max(20, Math.min(rect.height - 20, py));
+    obj.x = px / rect.width * 100;
+    obj.y = py / rect.height * 100;
+    el.style.left = obj.x + '%';
+    el.style.top = obj.y + '%';
+    updateArrowsFast();
+  });
+  el.addEventListener('mouseup', function(){
+    if(dragEl){ dragEl.el.style.zIndex=20; dragEl=null; }
+  });
 }
 function getCanvasPoint(clientX, clientY){
   var rect = canvas.getBoundingClientRect();
@@ -468,58 +451,37 @@ function endDraw(){
   currentPath = null;
   currentPoints = [];
 }
-function eraseAt(clientX, clientY){
-  var pt = getCanvasPoint(clientX, clientY);
-  var r = 30;
-  for(var i=strokes.length - 1; i >= 0; i--){
-    var p = strokes[i].path;
-    try{
-      var bbox = p.getBBox();
-      if(pt.x >= bbox.x - r && pt.x <= bbox.x + bbox.width + r &&
-         pt.y >= bbox.y - r && pt.y <= bbox.y + bbox.height + r){
-        p.remove();
-        strokes.splice(i, 1);
-        break;
-      }
-    }catch(e){}
-  }
-}
 canvas.addEventListener('touchstart', function(e){
-  if(penMode){
-    e.preventDefault();
-    colorPop.classList.remove('show');
-    var t = e.touches[0];
-    startDraw(t.clientX, t.clientY);
-  } else if(eraserMode){
-    e.preventDefault();
-    var t2 = e.touches[0];
-    eraseAt(t2.clientX, t2.clientY);
-  }
+  if(!penMode) return;
+  e.preventDefault();
+  colorPop.classList.remove('show');
+  var t = e.touches[0];
+  startDraw(t.clientX, t.clientY);
 }, {passive:false});
 canvas.addEventListener('touchmove', function(e){
-  if(penMode){
-    e.preventDefault();
-    var t = e.touches[0];
-    moveDraw(t.clientX, t.clientY);
-  } else if(eraserMode){
-    e.preventDefault();
-    var t2 = e.touches[0];
-    eraseAt(t2.clientX, t2.clientY);
-  }
+  if(!penMode) return;
+  e.preventDefault();
+  var t = e.touches[0];
+  moveDraw(t.clientX, t.clientY);
 }, {passive:false});
 canvas.addEventListener('touchend', function(e){
-  if(penMode){ e.preventDefault(); endDraw(); }
+  if(!penMode) return;
+  e.preventDefault();
+  endDraw();
 }, {passive:false});
 canvas.addEventListener('mousedown', function(e){
-  if(penMode){ e.preventDefault(); colorPop.classList.remove('show'); startDraw(e.clientX, e.clientY); }
-  else if(eraserMode){ e.preventDefault(); eraseAt(e.clientX, e.clientY); }
+  if(!penMode) return;
+  e.preventDefault();
+  colorPop.classList.remove('show');
+  startDraw(e.clientX, e.clientY);
 });
 canvas.addEventListener('mousemove', function(e){
-  if(penMode){ moveDraw(e.clientX, e.clientY); }
-  else if(eraserMode && (e.buttons & 1)){ eraseAt(e.clientX, e.clientY); }
+  if(!penMode) return;
+  moveDraw(e.clientX, e.clientY);
 });
 canvas.addEventListener('mouseup', function(e){
-  if(penMode){ endDraw(); }
+  if(!penMode) return;
+  endDraw();
 });
 canvas.addEventListener('mouseleave', function(e){
   if(penMode){ endDraw(); }
@@ -556,13 +518,6 @@ function undoLast(){
   updateUndoBtn();
   drawArrows();
 }
-function toggleDel(){
-  clearAllTools();
-  delMode = true;
-  var btn = document.getElementById('btnDel');
-  btn.className='btn-del active';
-  btn.textContent='✅ 退出删除';
-}
 function resetAll(){
   for(var i=0; i<elements.length; i++) elements[i].el.remove();
   for(var j=0; j<strokes.length; j++) strokes[j].path.remove();
@@ -572,15 +527,14 @@ function resetAll(){
   drawArrows();
 }
 function checkModel(){
-  var allOk = true;
   var keys = Object.keys(TARGETS);
   for(var i=0; i<keys.length; i++){
     var type = keys[i], placed = [];
     for(var j=0; j<elements.length; j++){ if(elements[j].type===type) placed.push(elements[j]); }
-    if(placed.length === 0){ allOk = false; continue; }
+    if(placed.length === 0) return false;
     var o = placed[0];
     var dx = Math.abs(o.x - TARGETS[type].x), dy = Math.abs(o.y - TARGETS[type].y);
-    if(dx > 15 || dy > 18){ allOk = false; }
+    if(dx > 15 || dy > 18) return false;
   }
   var byType = {};
   for(var k=0; k<elements.length; k++){ if(!byType[elements[k].type]) byType[elements[k].type] = elements[k]; }
@@ -592,11 +546,10 @@ function checkModel(){
     for(var n=0; n<arrows.length; n++){
       if(arrows[n].fromId===fromEl.id && arrows[n].toId===toEl.id){ hasArrow=true; break; }
     }
-    if(!hasArrow){ allOk = false; }
+    if(!hasArrow) return false;
   }
-  return allOk;
+  return true;
 }
-function hideFb(){ document.getElementById('feedback').className='feedback'; }
 function showSubmitModal(){
   document.getElementById('submitModal').className='submit-modal show';
   setTimeout(function(){ document.getElementById('studentName').focus(); }, 100);
@@ -624,7 +577,6 @@ function doSubmit(){
   var passed = checkModel();
   var btn = document.getElementById('sendBtn');
   btn.textContent = '截图中...'; btn.disabled = true;
-  hideFb();
   function onDone(imgUrl){
     btn.textContent = '发送中...';
     var urlText = imgUrl ? imgUrl : '（截图上传失败，请课堂查看）';
@@ -667,7 +619,7 @@ function doSubmit(){
     } catch(e) { onDone(''); }
   }
   if(typeof html2canvas === 'undefined'){
-    loadScript('https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js?v=14', proceed);
+    loadScript('https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js?v=15', proceed);
   } else { proceed(); }
 }
 window.addEventListener('resize', function(){ drawArrows(); });
