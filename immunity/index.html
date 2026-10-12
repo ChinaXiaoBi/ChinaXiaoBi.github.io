@@ -23,6 +23,7 @@ body{display:flex;flex-direction:column;touch-action:manipulation}
 .pal-item.select-tool{border-color:#2c5f2d;background:#eef5ee}
 .pal-item.select-tool.active{outline:3px solid #2c5f2d;background:#d5e8d5}
 .canvas{flex:1;position:relative;overflow:hidden;background:#fff;background-image:radial-gradient(circle,#dde5d5 1px,transparent 1px);background-size:18px 18px;touch-action:none}
+.canvas.pen-mode .placed{pointer-events:none}
 .placed{position:absolute;cursor:grab;user-select:none;-webkit-user-select:none;display:flex;flex-direction:column;align-items:center;z-index:20;transform:translateX(-50%);will-change:left,top;touch-action:none}
 .placed.arrow-source{outline:3px solid #2980b9;outline-offset:2px;border-radius:10px;z-index:50}
 .placed .cell{width:46px;height:46px;display:flex;align-items:center;justify-content:center}
@@ -44,7 +45,6 @@ body{display:flex;flex-direction:column;touch-action:manipulation}
 .arrow-tool-body{font-size:22px;line-height:1;color:#2980b9}
 .arrow-svg{position:absolute;top:0;left:0;pointer-events:none;z-index:10;overflow:visible}
 .draw-svg{position:absolute;top:0;left:0;z-index:15;overflow:visible;touch-action:none;pointer-events:none}
-.draw-svg path{pointer-events:none}
 .controls{padding:5px 8px;background:#f7f9f4;border-top:2px solid #d8e0d0;display:flex;gap:5px;justify-content:center;flex-shrink:0;flex-wrap:wrap}
 .controls button{padding:7px 13px;border:none;border-radius:16px;font-size:0.78rem;cursor:pointer;font-weight:600}
 .controls button:active{transform:scale(0.95)}
@@ -54,12 +54,6 @@ body{display:flex;flex-direction:column;touch-action:manipulation}
 .btn-del.active{background:#c0392b;box-shadow:0 0 0 2px rgba(231,76,60,0.3)}
 .btn-undo{background:#3498db;color:#fff}
 .btn-undo:disabled{background:#bdc3c7}
-.feedback{position:absolute;top:8px;left:50%;transform:translateX(-50%);background:#fff8e1;border:2px solid #ffc107;border-radius:10px;padding:10px 14px;max-width:94%;width:340px;z-index:100;display:none;box-shadow:0 4px 20px rgba(0,0,0,0.15)}
-.feedback.show{display:block}
-.feedback.ok{background:#e8f5e9;border-color:#4caf50}
-.feedback h4{font-size:0.9rem;margin-bottom:5px}
-.feedback ul{padding-left:16px;font-size:0.78rem;line-height:1.6;color:#555}
-.feedback .close-fb{float:right;cursor:pointer;font-size:1.1rem;color:#999;padding:0 4px;line-height:1}
 .submit-modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:200;align-items:center;justify-content:center}
 .submit-modal.show{display:flex}
 .submit-box{background:#fff;border-radius:14px;padding:20px;width:90%;max-width:340px;text-align:center}
@@ -116,16 +110,11 @@ body{display:flex;flex-direction:column;touch-action:manipulation}
   <div class="canvas" id="canvas">
     <svg class="arrow-svg" id="arrowSvg"></svg>
     <svg class="draw-svg" id="drawSvg"></svg>
-    <div class="feedback" id="feedback">
-      <span class="close-fb" onclick="hideFb()">&times;</span>
-      <h4 id="fbTitle"></h4>
-      <ul id="fbList"></ul>
-    </div>
   </div>
 </div>
 <div class="controls">
   <button class="btn-undo" id="btnUndo" onclick="undoLast()">↩️ 撤回</button>
-  <button class="btn-del" id="btnDel" onclick="toggleDel()">🧽 擦除模型</button>
+  <button class="btn-del" id="btnDel" onclick="toggleDel()">🧽 橡皮</button>
   <button class="btn-reset" onclick="resetAll()">🔄 重置</button>
   <button class="btn-submit" onclick="showSubmitModal()">📤 提交答案</button>
 </div>
@@ -141,489 +130,67 @@ body{display:flex;flex-direction:column;touch-action:manipulation}
   </div>
 </div>
 <script>
-var CELL_INFO = {
-  virus:{name:'诺如病毒',cls:'virus-body'},
-  apc:{name:'抗原呈递细胞',cls:'apc-body'},
-  helperT:{name:'辅助性T细胞',cls:'helper-body'},
-  bcell:{name:'B细胞',cls:'bcell-body'},
-  plasma:{name:'浆细胞',cls:'plasma-body'},
-  memory:{name:'记忆B细胞',cls:'memory-body'},
-  antibody:{name:'抗体',cls:'antibody-body'}
-};
-var TARGETS = {
-  virus:{x:10,y:55}, apc:{x:27,y:55}, helperT:{x:44,y:22},
-  bcell:{x:60,y:58}, memory:{x:77,y:20}, plasma:{x:77,y:82}, antibody:{x:91,y:82}
-};
-var REQUIRED_ARROWS = [
-  {from:'virus',to:'apc'},{from:'apc',to:'helperT'},{from:'helperT',to:'bcell'},
-  {from:'bcell',to:'plasma'},{from:'bcell',to:'memory'},{from:'plasma',to:'antibody'}
-];
+var CELL_INFO = {virus:{name:'诺如病毒',cls:'virus-body'},apc:{name:'抗原呈递细胞',cls:'apc-body'},helperT:{name:'辅助性T细胞',cls:'helper-body'},bcell:{name:'B细胞',cls:'bcell-body'},plasma:{name:'浆细胞',cls:'plasma-body'},memory:{name:'记忆B细胞',cls:'memory-body'},antibody:{name:'抗体',cls:'antibody-body'}};
+var TARGETS = {virus:{x:10,y:55},apc:{x:27,y:55},helperT:{x:44,y:22},bcell:{x:60,y:58},memory:{x:77,y:20},plasma:{x:77,y:82},antibody:{x:91,y:82}};
+var REQUIRED_ARROWS = [{from:'virus',to:'apc'},{from:'apc',to:'helperT'},{from:'helperT',to:'bcell'},{from:'bcell',to:'plasma'},{from:'bcell',to:'memory'},{from:'plasma',to:'antibody'}];
 var PEN_COLORS = ['#e74c3c','#2c3e50','#2980b9','#27ae60'];
 var PEN_COLOR_NAMES = ['红','黑','蓝','绿'];
-var elements = [];
-var arrows = [];
-var undoStack = [];
-var strokes = [];
-var dragEl = null, dragOffsetX = 0, dragOffsetY = 0;
-var delMode = false, arrowMode = false, arrowSource = null;
-var penMode = false;
-var penColorIdx = 0;
-var drawing = false, currentPath = null, currentPoints = [];
-var eid = 0, sid = 0;
-var canvas = document.getElementById('canvas');
-var svg = document.getElementById('arrowSvg');
-var drawSvg = document.getElementById('drawSvg');
-var rafPending = false;
-var colorPop = document.getElementById('colorPop');
-var selectTool = document.getElementById('selectTool');
-var penTool = document.getElementById('penTool');
-var arrowTool = document.getElementById('arrowTool');
-var btnDel = document.getElementById('btnDel');
-function buildColorPop(){
-  colorPop.innerHTML = '';
-  for(var i=0; i<PEN_COLORS.length; i++){
-    (function(idx){
-      var dot = document.createElement('div');
-      dot.className = 'color-dot' + (idx === penColorIdx ? ' selected' : '');
-      dot.style.background = PEN_COLORS[idx];
-      dot.onclick = function(e){ e.stopPropagation(); selectColor(idx); };
-      colorPop.appendChild(dot);
-    })(i);
-  }
-}
-function selectColor(idx){
-  penColorIdx = idx;
-  document.getElementById('penLabel').textContent = PEN_COLOR_NAMES[idx];
-  colorPop.classList.remove('show');
-  buildColorPop();
-}
-function updateUndoBtn(){
-  document.getElementById('btnUndo').disabled = undoStack.length === 0;
-}
-function loadScript(src, cb){
-  var s = document.createElement('script');
-  s.src = src; s.onload = cb;
-  s.onerror = function(){ alert('截图组件加载失败，请检查网络'); };
-  document.head.appendChild(s);
-}
-function onPalClick(item){
-  if(penMode) return;
-  var type = item.getAttribute('data-type');
-  if(type) addElement(type, 30 + Math.random()*25, 30 + Math.random()*30);
-}
-function clearAllTools(){
-  arrowMode = false; arrowSource = null;
-  penMode = false;
-  delMode = false;
-  selectTool.className = 'pal-item select-tool active';
-  arrowTool.className = 'pal-item arrow-tool';
-  penTool.className = 'pal-item pen-tool';
-  btnDel.className = 'btn-del';
-  btnDel.textContent = '🧽 擦除模型';
-  colorPop.classList.remove('show');
-}
-function toggleSelectTool(){ clearAllTools(); }
-function toggleArrowTool(){
-  if(arrowMode){ clearAllTools(); return; }
-  clearAllTools();
-  arrowMode = true;
-  selectTool.className = 'pal-item select-tool';
-  arrowTool.className = 'pal-item arrow-tool active';
-}
-function onPenClick(ev){
-  if(ev) ev.stopPropagation();
-  if(penMode){
-    buildColorPop();
-    colorPop.classList.toggle('show');
-    return;
-  }
-  clearAllTools();
-  penMode = true;
-  selectTool.className = 'pal-item select-tool';
-  penTool.className = 'pal-item pen-tool active';
-  document.getElementById('penLabel').textContent = PEN_COLOR_NAMES[penColorIdx];
-  buildColorPop();
-  colorPop.classList.add('show');
-  setTimeout(function(){ colorPop.classList.remove('show'); }, 4000);
-}
-function toggleDel(){
-  if(delMode){ clearAllTools(); return; }
-  clearAllTools();
-  delMode = true;
-  btnDel.className = 'btn-del active';
-  btnDel.textContent = '✅ 退出擦除';
-}
-function addElement(type, xPct, yPct){
-  var info = CELL_INFO[type];
-  var el = document.createElement('div');
-  el.className = 'placed';
-  var innerSvg = type==='antibody' ? '<svg viewBox="0 0 40 40" width="32" height="32"><path d="M20 35 L20 20 M20 20 L8 8 M20 20 L32 8" stroke="#c0392b" stroke-width="4" stroke-linecap="round" fill="none"/></svg>' : '';
-  el.innerHTML = '<div class="cell"><div class="' + info.cls + '">' + innerSvg + '</div></div><div class="name">' + info.name + '</div>';
-  el.style.left = xPct + '%'; el.style.top = yPct + '%';
-  canvas.appendChild(el);
-  var obj = {id: ++eid, type: type, el: el, x: xPct, y: yPct, lineEl: null};
-  elements.push(obj);
-  undoStack.push({action:'addElement', id: obj.id});
-  updateUndoBtn();
-  makeDraggable(obj);
-}
-function getCenter(el){
-  var rect = canvas.getBoundingClientRect();
-  var r = el.getBoundingClientRect();
-  return {x: r.left - rect.left + r.width/2, y: r.top - rect.top + r.height/2};
-}
-function buildSvgDefs(){
-  svg.innerHTML = '<defs><marker id="ah" markerWidth="12" markerHeight="10" refX="10" refY="5" orient="auto"><polygon points="0 0, 12 5, 0 10" fill="#2c5f2d"/></marker></defs>';
-}
-function drawArrows(){
-  var cw = canvas.offsetWidth, ch = canvas.offsetHeight;
-  svg.setAttribute('width', cw); svg.setAttribute('height', ch);
-  buildSvgDefs();
-  for(var i=0; i<arrows.length; i++){
-    var from = findById(arrows[i].fromId);
-    var to = findById(arrows[i].toId);
-    if(!from || !to) continue;
-    var p1 = getCenter(from.el), p2 = getCenter(to.el);
-    var line = document.createElementNS('http://www.w3.org/2000/svg','line');
-    line.setAttribute('x1', p1.x); line.setAttribute('y1', p1.y);
-    line.setAttribute('x2', p2.x); line.setAttribute('y2', p2.y);
-    line.setAttribute('stroke', '#2c5f2d'); line.setAttribute('stroke-width', '3');
-    line.setAttribute('marker-end', 'url(#ah)');
-    svg.appendChild(line);
-    from.lineEl = line;
-  }
-}
-function updateArrowsFast(){
-  if(rafPending) return;
-  rafPending = true;
-  requestAnimationFrame(function(){
-    rafPending = false;
-    for(var i=0; i<arrows.length; i++){
-      var from = findById(arrows[i].fromId);
-      var to = findById(arrows[i].toId);
-      if(!from || !to || !from.lineEl) continue;
-      var p1 = getCenter(from.el), p2 = getCenter(to.el);
-      from.lineEl.setAttribute('x1', p1.x);
-      from.lineEl.setAttribute('y1', p1.y);
-      from.lineEl.setAttribute('x2', p2.x);
-      from.lineEl.setAttribute('y2', p2.y);
-    }
-  });
-}
-function findById(id){
-  for(var i=0; i<elements.length; i++){ if(elements[i].id === id) return elements[i]; }
-  return null;
-}
-function clearArrowSourceHighlight(){
-  for(var i=0; i<elements.length; i++){ elements[i].el.classList.remove('arrow-source'); }
-}
-function handleDelete(obj){
-  var na = [];
-  for(var i=0; i<arrows.length; i++){ if(arrows[i].fromId!==obj.id && arrows[i].toId!==obj.id) na.push(arrows[i]); }
-  arrows = na;
-  obj.el.remove();
-  var ne = [];
-  for(var j=0; j<elements.length; j++){ if(elements[j].id!==obj.id) ne.push(elements[j]); }
-  elements = ne;
-  undoStack = [];
-  updateUndoBtn();
-  drawArrows();
-}
-function handleArrowClick(obj){
-  if(!arrowSource){
-    arrowSource = obj;
-    obj.el.classList.add('arrow-source');
-  } else if(arrowSource.id === obj.id){
-    obj.el.classList.remove('arrow-source');
-    arrowSource = null;
-  } else {
-    arrows.push({fromId: arrowSource.id, toId: obj.id});
-    undoStack.push({action:'addArrow', fromId: arrowSource.id, toId: obj.id});
-    updateUndoBtn();
-    clearArrowSourceHighlight();
-    arrowSource = null;
-    drawArrows();
-  }
-}
-function makeDraggable(obj){
-  var el = obj.el;
-  el.addEventListener('touchstart', function(e){
-    if(e.touches.length > 1) return;
-    if(penMode){ e.stopPropagation(); return; }
-    var t = e.touches[0];
-    if(delMode){ handleDelete(obj); return; }
-    if(arrowMode){ handleArrowClick(obj); return; }
-    dragEl = obj;
-    var rect = canvas.getBoundingClientRect();
-    var r = el.getBoundingClientRect();
-    dragOffsetX = t.clientX - r.left;
-    dragOffsetY = t.clientY - r.top;
-    el.style.zIndex = 50;
-    e.preventDefault();
-  }, {passive:false});
-  el.addEventListener('touchmove', function(e){
-    if(penMode){ e.stopPropagation(); return; }
-    if(!dragEl || dragEl.id !== obj.id) return;
-    var t = e.touches[0];
-    var rect = canvas.getBoundingClientRect();
-    var px = t.clientX - rect.left - dragOffsetX;
-    var py = t.clientY - rect.top - dragOffsetY;
-    px = Math.max(20, Math.min(rect.width - 20, px));
-    py = Math.max(20, Math.min(rect.height - 20, py));
-    obj.x = px / rect.width * 100;
-    obj.y = py / rect.height * 100;
-    el.style.left = obj.x + '%';
-    el.style.top = obj.y + '%';
-    updateArrowsFast();
-    e.preventDefault();
-  }, {passive:false});
-  el.addEventListener('touchend', function(){
-    if(dragEl){ dragEl.el.style.zIndex=20; dragEl=null; }
-  });
-  el.addEventListener('mousedown', function(e){
-    if(penMode){ e.stopPropagation(); return; }
-    e.preventDefault();
-    if(delMode){ handleDelete(obj); return; }
-    if(arrowMode){ handleArrowClick(obj); return; }
-    dragEl = obj;
-    var rect = canvas.getBoundingClientRect();
-    var r = el.getBoundingClientRect();
-    dragOffsetX = e.clientX - r.left;
-    dragOffsetY = e.clientY - r.top;
-    el.style.zIndex = 50;
-  });
-  el.addEventListener('mousemove', function(e){
-    if(penMode) return;
-    if(!dragEl || dragEl.id !== obj.id) return;
-    var rect = canvas.getBoundingClientRect();
-    var px = e.clientX - rect.left - dragOffsetX;
-    var py = e.clientY - rect.top - dragOffsetY;
-    px = Math.max(20, Math.min(rect.width - 20, px));
-    py = Math.max(20, Math.min(rect.height - 20, py));
-    obj.x = px / rect.width * 100;
-    obj.y = py / rect.height * 100;
-    el.style.left = obj.x + '%';
-    el.style.top = obj.y + '%';
-    updateArrowsFast();
-  });
-  el.addEventListener('mouseup', function(){
-    if(dragEl){ dragEl.el.style.zIndex=20; dragEl=null; }
-  });
-}
-function getCanvasPoint(clientX, clientY){
-  var rect = canvas.getBoundingClientRect();
-  return {x: clientX - rect.left, y: clientY - rect.top};
-}
-function startDraw(clientX, clientY){
-  drawing = true;
-  var pt = getCanvasPoint(clientX, clientY);
-  currentPoints = [pt];
-  currentPath = document.createElementNS('http://www.w3.org/2000/svg','path');
-  currentPath.setAttribute('d', 'M' + pt.x + ',' + pt.y);
-  currentPath.setAttribute('stroke', PEN_COLORS[penColorIdx]);
-  currentPath.setAttribute('stroke-width', '3');
-  currentPath.setAttribute('fill', 'none');
-  currentPath.setAttribute('stroke-linecap', 'round');
-  currentPath.setAttribute('stroke-linejoin', 'round');
-  drawSvg.appendChild(currentPath);
-}
-function moveDraw(clientX, clientY){
-  if(!drawing || !currentPath) return;
-  var pt = getCanvasPoint(clientX, clientY);
-  currentPoints.push(pt);
-  var d = 'M' + currentPoints[0].x + ',' + currentPoints[0].y;
-  for(var i=1; i<currentPoints.length; i++){
-    d += ' L' + currentPoints[i].x + ',' + currentPoints[i].y;
-  }
-  currentPath.setAttribute('d', d);
-}
-function endDraw(){
-  if(!drawing) return;
-  drawing = false;
-  if(currentPath && currentPoints.length > 1){
-    var stroke = {id: ++sid, path: currentPath};
-    strokes.push(stroke);
-    undoStack.push({action:'addStroke', id: stroke.id});
-    updateUndoBtn();
-  } else if(currentPath){
-    currentPath.remove();
-  }
-  currentPath = null;
-  currentPoints = [];
-}
-canvas.addEventListener('touchstart', function(e){
-  if(!penMode) return;
-  e.preventDefault();
-  colorPop.classList.remove('show');
-  var t = e.touches[0];
-  startDraw(t.clientX, t.clientY);
-}, {passive:false});
-canvas.addEventListener('touchmove', function(e){
-  if(!penMode) return;
-  e.preventDefault();
-  var t = e.touches[0];
-  moveDraw(t.clientX, t.clientY);
-}, {passive:false});
-canvas.addEventListener('touchend', function(e){
-  if(!penMode) return;
-  e.preventDefault();
-  endDraw();
-}, {passive:false});
-canvas.addEventListener('mousedown', function(e){
-  if(!penMode) return;
-  e.preventDefault();
-  colorPop.classList.remove('show');
-  startDraw(e.clientX, e.clientY);
-});
-canvas.addEventListener('mousemove', function(e){
-  if(!penMode) return;
-  moveDraw(e.clientX, e.clientY);
-});
-canvas.addEventListener('mouseup', function(e){
-  if(!penMode) return;
-  endDraw();
-});
-canvas.addEventListener('mouseleave', function(e){
-  if(penMode){ endDraw(); }
-});
-function undoLast(){
-  if(undoStack.length === 0) return;
-  var action = undoStack.pop();
-  if(action.action === 'addElement'){
-    var el = findById(action.id);
-    if(el){
-      var na = [];
-      for(var i=0; i<arrows.length; i++){ if(arrows[i].fromId!==el.id && arrows[i].toId!==el.id) na.push(arrows[i]); }
-      arrows = na;
-      el.el.remove();
-      var ne = [];
-      for(var j=0; j<elements.length; j++){ if(elements[j].id!==el.id) ne.push(elements[j]); }
-      elements = ne;
-    }
-  } else if(action.action === 'addArrow'){
-    var na2 = [];
-    for(var k=0; k<arrows.length; k++){
-      if(!(arrows[k].fromId===action.fromId && arrows[k].toId===action.toId)) na2.push(arrows[k]);
-    }
-    arrows = na2;
-  } else if(action.action === 'addStroke'){
-    for(var m=0; m<strokes.length; m++){
-      if(strokes[m].id === action.id){
-        strokes[m].path.remove();
-        strokes.splice(m, 1);
-        break;
-      }
-    }
-  }
-  updateUndoBtn();
-  drawArrows();
-}
-function resetAll(){
-  for(var i=0; i<elements.length; i++) elements[i].el.remove();
-  for(var j=0; j<strokes.length; j++) strokes[j].path.remove();
-  elements = []; arrows = []; undoStack = []; strokes = [];
-  drawSvg.innerHTML = '';
-  updateUndoBtn();
-  drawArrows();
-}
-function checkModel(){
-  var keys = Object.keys(TARGETS);
-  for(var i=0; i<keys.length; i++){
-    var type = keys[i], placed = [];
-    for(var j=0; j<elements.length; j++){ if(elements[j].type===type) placed.push(elements[j]); }
-    if(placed.length === 0) return false;
-    var o = placed[0];
-    var dx = Math.abs(o.x - TARGETS[type].x), dy = Math.abs(o.y - TARGETS[type].y);
-    if(dx > 15 || dy > 18) return false;
-  }
-  var byType = {};
-  for(var k=0; k<elements.length; k++){ if(!byType[elements[k].type]) byType[elements[k].type] = elements[k]; }
-  for(var m=0; m<REQUIRED_ARROWS.length; m++){
-    var ra = REQUIRED_ARROWS[m];
-    var fromEl = byType[ra.from], toEl = byType[ra.to];
-    if(!fromEl || !toEl) continue;
-    var hasArrow = false;
-    for(var n=0; n<arrows.length; n++){
-      if(arrows[n].fromId===fromEl.id && arrows[n].toId===toEl.id){ hasArrow=true; break; }
-    }
-    if(!hasArrow) return false;
-  }
-  return true;
-}
-function showSubmitModal(){
-  document.getElementById('submitModal').className='submit-modal show';
-  setTimeout(function(){ document.getElementById('studentName').focus(); }, 100);
-}
-function closeSubmitModal(){ document.getElementById('submitModal').className='submit-modal'; }
-function uploadImg(blob, cb){
-  var fd = new FormData();
-  fd.append('reqtype', 'fileupload');
-  fd.append('time', '24h');
-  fd.append('fileToUpload', blob, 'model.jpg');
-  var up = new XMLHttpRequest();
-  up.open('POST', 'https://litterbox.catbox.moe/resources/internals/api.php', true);
-  up.timeout = 25000;
-  up.onload = function(){
-    if(up.status === 200 && up.responseText.indexOf('http') === 0){ cb(up.responseText.trim()); }
-    else { cb(''); }
-  };
-  up.onerror = function(){ cb(''); };
-  up.ontimeout = function(){ cb(''); };
-  up.send(fd);
-}
-function doSubmit(){
-  var name = document.getElementById('studentName').value.trim();
-  if(!name){ alert('请输入你的姓名'); return; }
-  var passed = checkModel();
-  var btn = document.getElementById('sendBtn');
-  btn.textContent = '截图中...'; btn.disabled = true;
-  function onDone(imgUrl){
-    btn.textContent = '发送中...';
-    var urlText = imgUrl ? imgUrl : '（截图上传失败，请课堂查看）';
-    var payload = {
-      name: name,
-      _subject: '【生物作业】' + name + '的体液免疫模型' + (passed ? ' ✅正确' : ' ❌有误'),
-      _template: 'table',
-      '学生姓名': name,
-      '检查结果': passed ? '✅ 完全正确' : '❌ 有错误',
-      '细胞数': String(elements.length),
-      '箭头数': String(arrows.length),
-      '模型截图': urlText
-    };
-    var xhr = new XMLHttpRequest();
-    xhr.open('POST', 'https://formsubmit.co/ajax/2507166891@qq.com', true);
-    xhr.setRequestHeader('Content-Type', 'application/json');
-    xhr.setRequestHeader('Accept', 'application/json');
-    xhr.timeout = 15000;
-    xhr.onload = function(){
-      btn.textContent = '提交'; btn.disabled = false;
-      closeSubmitModal();
-      var box = document.getElementById('submitBox');
-      box.innerHTML = '<div class="submit-ok"><div class="big">✅</div><h3>提交成功！</h3><p style="font-size:0.85rem;color:#666;margin-top:8px">' + name + '，结果已发送给老师</p></div>';
-      setTimeout(function(){
-        box.innerHTML = '<h3>📤 提交你的答案</h3><p style="font-size:0.8rem;color:#888;margin-bottom:12px">提交后老师会收到你的模型截图</p><input type="text" id="studentName" placeholder="输入你的姓名" maxlength="20"><div class="btn-row"><button class="btn-cancel" onclick="closeSubmitModal()">取消</button><button class="btn-send" id="sendBtn" onclick="doSubmit()">提交</button></div>';
-      }, 2500);
-    };
-    xhr.onerror = function(){ btn.textContent = '提交'; btn.disabled = false; alert('邮件发送失败，请重试'); };
-    xhr.ontimeout = function(){ btn.textContent = '提交'; btn.disabled = false; alert('发送超时，请重试'); };
-    xhr.send(JSON.stringify(payload));
-  }
-  function proceed(){
-    try {
-      html2canvas(canvas, {backgroundColor:'#ffffff', scale:1.5, useCORS:true, logging:false}).then(function(canvasImg){
-        btn.textContent = '上传图片...';
-        canvasImg.toBlob(function(blob){
-          uploadImg(blob, function(url){ onDone(url); });
-        }, 'image/jpeg', 0.7);
-      }).catch(function(e){ onDone(''); });
-    } catch(e) { onDone(''); }
-  }
-  if(typeof html2canvas === 'undefined'){
-    loadScript('https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js?v=15', proceed);
-  } else { proceed(); }
-}
-window.addEventListener('resize', function(){ drawArrows(); });
-window.addEventListener('orientationchange', function(){ setTimeout(drawArrows, 300); });
+var elements=[],arrows=[],undoStack=[],strokes=[];
+var dragEl=null,dragOffsetX=0,dragOffsetY=0;
+var delMode=false,arrowMode=false,arrowSource=null,penMode=false;
+var penColorIdx=0;
+var drawing=false,currentPath=null,currentPoints=[];
+var eid=0,sid=0;
+var canvas=document.getElementById('canvas');
+var svg=document.getElementById('arrowSvg');
+var drawSvg=document.getElementById('drawSvg');
+var rafPending=false;
+var colorPop=document.getElementById('colorPop');
+var selectTool=document.getElementById('selectTool');
+var penTool=document.getElementById('penTool');
+var arrowTool=document.getElementById('arrowTool');
+var btnDel=document.getElementById('btnDel');
+function buildColorPop(){colorPop.innerHTML='';for(var i=0;i<PEN_COLORS.length;i++){(function(idx){var dot=document.createElement('div');dot.className='color-dot'+(idx===penColorIdx?' selected':'');dot.style.background=PEN_COLORS[idx];dot.onclick=function(e){e.stopPropagation();selectColor(idx);};colorPop.appendChild(dot);})(i);}}
+function selectColor(idx){penColorIdx=idx;document.getElementById('penLabel').textContent=PEN_COLOR_NAMES[idx];colorPop.classList.remove('show');buildColorPop();}
+function updateUndoBtn(){document.getElementById('btnUndo').disabled=undoStack.length===0;}
+function loadScript(src,cb){var s=document.createElement('script');s.src=src;s.onload=cb;s.onerror=function(){alert('截图组件加载失败，请检查网络');};document.head.appendChild(s);}
+function onPalClick(item){if(penMode||delMode)return;var type=item.getAttribute('data-type');if(type)addElement(type,30+Math.random()*25,30+Math.random()*30);}
+function clearAllTools(){arrowMode=false;arrowSource=null;penMode=false;delMode=false;canvas.classList.remove('pen-mode');selectTool.className='pal-item select-tool active';arrowTool.className='pal-item arrow-tool';penTool.className='pal-item pen-tool';btnDel.className='btn-del';btnDel.textContent='🧽 橡皮';colorPop.classList.remove('show');}
+function toggleSelectTool(){clearAllTools();}
+function toggleArrowTool(){if(arrowMode){clearAllTools();return;}clearAllTools();arrowMode=true;selectTool.className='pal-item select-tool';arrowTool.className='pal-item arrow-tool active';}
+function onPenClick(ev){if(ev)ev.stopPropagation();if(penMode){buildColorPop();colorPop.classList.toggle('show');return;}clearAllTools();penMode=true;canvas.classList.add('pen-mode');selectTool.className='pal-item select-tool';penTool.className='pal-item pen-tool active';document.getElementById('penLabel').textContent=PEN_COLOR_NAMES[penColorIdx];buildColorPop();colorPop.classList.add('show');setTimeout(function(){colorPop.classList.remove('show');},4000);}
+function toggleDel(){if(delMode){clearAllTools();return;}clearAllTools();delMode=true;btnDel.className='btn-del active';btnDel.textContent='✅ 退出橡皮';}
+function addElement(type,xPct,yPct){var info=CELL_INFO[type];var el=document.createElement('div');el.className='placed';var innerSvg=type==='antibody'?'<svg viewBox="0 0 40 40" width="32" height="32"><path d="M20 35 L20 20 M20 20 L8 8 M20 20 L32 8" stroke="#c0392b" stroke-width="4" stroke-linecap="round" fill="none"/></svg>':'';el.innerHTML='<div class="cell"><div class="'+info.cls+'">'+innerSvg+'</div></div><div class="name">'+info.name+'</div>';el.style.left=xPct+'%';el.style.top=yPct+'%';canvas.appendChild(el);var obj={id:++eid,type:type,el:el,x:xPct,y:yPct,lineEl:null};elements.push(obj);undoStack.push({action:'addElement',id:obj.id});updateUndoBtn();makeDraggable(obj);}
+function getCenter(el){var rect=canvas.getBoundingClientRect();var r=el.getBoundingClientRect();return{x:r.left-rect.left+r.width/2,y:r.top-rect.top+r.height/2};}
+function buildSvgDefs(){svg.innerHTML='<defs><marker id="ah" markerWidth="12" markerHeight="10" refX="10" refY="5" orient="auto"><polygon points="0 0, 12 5, 0 10" fill="#2c5f2d"/></marker></defs>';}
+function drawArrows(){var cw=canvas.offsetWidth,ch=canvas.offsetHeight;svg.setAttribute('width',cw);svg.setAttribute('height',ch);buildSvgDefs();for(var i=0;i<arrows.length;i++){var from=findById(arrows[i].fromId);var to=findById(arrows[i].toId);if(!from||!to)continue;var p1=getCenter(from.el),p2=getCenter(to.el);var line=document.createElementNS('http://www.w3.org/2000/svg','line');line.setAttribute('x1',p1.x);line.setAttribute('y1',p1.y);line.setAttribute('x2',p2.x);line.setAttribute('y2',p2.y);line.setAttribute('stroke','#2c5f2d');line.setAttribute('stroke-width','3');line.setAttribute('marker-end','url(#ah)');svg.appendChild(line);from.lineEl=line;}}
+function updateArrowsFast(){if(rafPending)return;rafPending=true;requestAnimationFrame(function(){rafPending=false;for(var i=0;i<arrows.length;i++){var from=findById(arrows[i].fromId);var to=findById(arrows[i].toId);if(!from||!to||!from.lineEl)continue;var p1=getCenter(from.el),p2=getCenter(to.el);from.lineEl.setAttribute('x1',p1.x);from.lineEl.setAttribute('y1',p1.y);from.lineEl.setAttribute('x2',p2.x);from.lineEl.setAttribute('y2',p2.y);}});}
+function findById(id){for(var i=0;i<elements.length;i++){if(elements[i].id===id)return elements[i];}return null;}
+function clearArrowSourceHighlight(){for(var i=0;i<elements.length;i++){elements[i].el.classList.remove('arrow-source');}}
+function handleDelete(obj){var na=[];for(var i=0;i<arrows.length;i++){if(arrows[i].fromId!==obj.id&&arrows[i].toId!==obj.id)na.push(arrows[i]);}arrows=na;obj.el.remove();var ne=[];for(var j=0;j<elements.length;j++){if(elements[j].id!==obj.id)ne.push(elements[j]);}elements=ne;undoStack=[];updateUndoBtn();drawArrows();}
+function handleArrowClick(obj){if(!arrowSource){arrowSource=obj;obj.el.classList.add('arrow-source');}else if(arrowSource.id===obj.id){obj.el.classList.remove('arrow-source');arrowSource=null;}else{arrows.push({fromId:arrowSource.id,toId:obj.id});undoStack.push({action:'addArrow',fromId:arrowSource.id,toId:obj.id});updateUndoBtn();clearArrowSourceHighlight();arrowSource=null;drawArrows();}}
+function makeDraggable(obj){var el=obj.el;el.addEventListener('touchstart',function(e){if(e.touches.length>1)return;var t=e.touches[0];if(delMode){handleDelete(obj);return;}if(arrowMode){handleArrowClick(obj);return;}dragEl=obj;var rect=canvas.getBoundingClientRect();var r=el.getBoundingClientRect();dragOffsetX=t.clientX-r.left;dragOffsetY=t.clientY-r.top;el.style.zIndex=50;e.preventDefault();},{passive:false});el.addEventListener('touchmove',function(e){if(!dragEl||dragEl.id!==obj.id)return;var t=e.touches[0];var rect=canvas.getBoundingClientRect();var px=t.clientX-rect.left-dragOffsetX;var py=t.clientY-rect.top-dragOffsetY;px=Math.max(20,Math.min(rect.width-20,px));py=Math.max(20,Math.min(rect.height-20,py));obj.x=px/rect.width*100;obj.y=py/rect.height*100;el.style.left=obj.x+'%';el.style.top=obj.y+'%';updateArrowsFast();e.preventDefault();},{passive:false});el.addEventListener('touchend',function(){if(dragEl){dragEl.el.style.zIndex=20;dragEl=null;}});el.addEventListener('mousedown',function(e){e.preventDefault();if(delMode){handleDelete(obj);return;}if(arrowMode){handleArrowClick(obj);return;}dragEl=obj;var rect=canvas.getBoundingClientRect();var r=el.getBoundingClientRect();dragOffsetX=e.clientX-r.left;dragOffsetY=e.clientY-r.top;el.style.zIndex=50;});el.addEventListener('mousemove',function(e){if(!dragEl||dragEl.id!==obj.id)return;var rect=canvas.getBoundingClientRect();var px=e.clientX-rect.left-dragOffsetX;var py=e.clientY-rect.top-dragOffsetY;px=Math.max(20,Math.min(rect.width-20,px));py=Math.max(20,Math.min(rect.height-20,py));obj.x=px/rect.width*100;obj.y=py/rect.height*100;el.style.left=obj.x+'%';el.style.top=obj.y+'%';updateArrowsFast();});el.addEventListener('mouseup',function(){if(dragEl){dragEl.el.style.zIndex=20;dragEl=null;}});}
+function getCanvasPoint(clientX,clientY){var rect=canvas.getBoundingClientRect();return{x:clientX-rect.left,y:clientY-rect.top};}
+function startDraw(clientX,clientY){drawing=true;var pt=getCanvasPoint(clientX,clientY);currentPoints=[pt];currentPath=document.createElementNS('http://www.w3.org/2000/svg','path');currentPath.setAttribute('d','M'+pt.x+','+pt.y);currentPath.setAttribute('stroke',PEN_COLORS[penColorIdx]);currentPath.setAttribute('stroke-width','3');currentPath.setAttribute('fill','none');currentPath.setAttribute('stroke-linecap','round');currentPath.setAttribute('stroke-linejoin','round');drawSvg.appendChild(currentPath);}
+function moveDraw(clientX,clientY){if(!drawing||!currentPath)return;var pt=getCanvasPoint(clientX,clientY);currentPoints.push(pt);var d='M'+currentPoints[0].x+','+currentPoints[0].y;for(var i=1;i<currentPoints.length;i++){d+=' L'+currentPoints[i].x+','+currentPoints[i].y;}currentPath.setAttribute('d',d);}
+function endDraw(){if(!drawing)return;drawing=false;if(currentPath&&currentPoints.length>1){var stroke={id:++sid,path:currentPath};strokes.push(stroke);undoStack.push({action:'addStroke',id:stroke.id});updateUndoBtn();}else if(currentPath){currentPath.remove();}currentPath=null;currentPoints=[];}
+function eraseAt(clientX,clientY){var pt=getCanvasPoint(clientX,clientY);var r=35;for(var i=strokes.length-1;i>=0;i--){var p=strokes[i].path;try{var bbox=p.getBBox();if(pt.x>=bbox.x-r&&pt.x<=bbox.x+bbox.width+r&&pt.y>=bbox.y-r&&pt.y<=bbox.y+bbox.height+r){p.remove();strokes.splice(i,1);break;}}catch(e){}}}
+canvas.addEventListener('touchstart',function(e){if(penMode){e.preventDefault();colorPop.classList.remove('show');var t=e.touches[0];startDraw(t.clientX,t.clientY);return;}if(delMode){e.preventDefault();var t2=e.touches[0];eraseAt(t2.clientX,t2.clientY);}},{passive:false});
+canvas.addEventListener('touchmove',function(e){if(penMode){e.preventDefault();var t=e.touches[0];moveDraw(t.clientX,t.clientY);return;}if(delMode){e.preventDefault();var t2=e.touches[0];eraseAt(t2.clientX,t2.clientY);}},{passive:false});
+canvas.addEventListener('touchend',function(e){if(penMode){e.preventDefault();endDraw();}},{passive:false});
+canvas.addEventListener('mousedown',function(e){if(penMode){e.preventDefault();colorPop.classList.remove('show');startDraw(e.clientX,e.clientY);return;}if(delMode){e.preventDefault();eraseAt(e.clientX,e.clientY);}});
+canvas.addEventListener('mousemove',function(e){if(penMode){moveDraw(e.clientX,e.clientY);return;}if(delMode&&(e.buttons&1)){eraseAt(e.clientX,e.clientY);}});
+canvas.addEventListener('mouseup',function(e){if(penMode){endDraw();}});
+canvas.addEventListener('mouseleave',function(e){if(penMode){endDraw();}});
+function undoLast(){if(undoStack.length===0)return;var action=undoStack.pop();if(action.action==='addElement'){var el=findById(action.id);if(el){var na=[];for(var i=0;i<arrows.length;i++){if(arrows[i].fromId!==el.id&&arrows[i].toId!==el.id)na.push(arrows[i]);}arrows=na;el.el.remove();var ne=[];for(var j=0;j<elements.length;j++){if(elements[j].id!==el.id)ne.push(elements[j]);}elements=ne;}}else if(action.action==='addArrow'){var na2=[];for(var k=0;k<arrows.length;k++){if(!(arrows[k].fromId===action.fromId&&arrows[k].toId===action.toId))na2.push(arrows[k]);}arrows=na2;}else if(action.action==='addStroke'){for(var m=0;m<strokes.length;m++){if(strokes[m].id===action.id){strokes[m].path.remove();strokes.splice(m,1);break;}}}updateUndoBtn();drawArrows();}
+function resetAll(){for(var i=0;i<elements.length;i++)elements[i].el.remove();for(var j=0;j<strokes.length;j++)strokes[j].path.remove();elements=[];arrows=[];undoStack=[];strokes=[];drawSvg.innerHTML='';updateUndoBtn();drawArrows();}
+function checkModel(){var keys=Object.keys(TARGETS);for(var i=0;i<keys.length;i++){var type=keys[i],placed=[];for(var j=0;j<elements.length;j++){if(elements[j].type===type)placed.push(elements[j]);}if(placed.length===0)return false;var o=placed[0];var dx=Math.abs(o.x-TARGETS[type].x),dy=Math.abs(o.y-TARGETS[type].y);if(dx>15||dy>18)return false;}var byType={};for(var k=0;k<elements.length;k++){if(!byType[elements[k].type])byType[elements[k].type]=elements[k];}for(var m=0;m<REQUIRED_ARROWS.length;m++){var ra=REQUIRED_ARROWS[m];var fromEl=byType[ra.from],toEl=byType[ra.to];if(!fromEl||!toEl)continue;var hasArrow=false;for(var n=0;n<arrows.length;n++){if(arrows[n].fromId===fromEl.id&&arrows[n].toId===toEl.id){hasArrow=true;break;}}if(!hasArrow)return false;}return true;}
+function showSubmitModal(){document.getElementById('submitModal').className='submit-modal show';setTimeout(function(){document.getElementById('studentName').focus();},100);}
+function closeSubmitModal(){document.getElementById('submitModal').className='submit-modal';}
+function uploadImg(blob,cb){var fd=new FormData();fd.append('reqtype','fileupload');fd.append('time','24h');fd.append('fileToUpload',blob,'model.jpg');var up=new XMLHttpRequest();up.open('POST','https://litterbox.catbox.moe/resources/internals/api.php',true);up.timeout=25000;up.onload=function(){if(up.status===200&&up.responseText.indexOf('http')===0){cb(up.responseText.trim());}else{cb('');}};up.onerror=function(){cb('');};up.ontimeout=function(){cb('');};up.send(fd);}
+function doSubmit(){var name=document.getElementById('studentName').value.trim();if(!name){alert('请输入你的姓名');return;}var passed=checkModel();var btn=document.getElementById('sendBtn');btn.textContent='截图中...';btn.disabled=true;function onDone(imgUrl){btn.textContent='发送中...';var urlText=imgUrl?imgUrl:'（截图上传失败，请课堂查看）';var payload={name:name,_subject:'【生物作业】'+name+'的体液免疫模型'+(passed?' ✅正确':' ❌有误'),_template:'table','学生姓名':name,'检查结果':passed?'✅ 完全正确':'❌ 有错误','细胞数':String(elements.length),'箭头数':String(arrows.length),'模型截图':urlText};var xhr=new XMLHttpRequest();xhr.open('POST','https://formsubmit.co/ajax/2507166891@qq.com',true);xhr.setRequestHeader('Content-Type','application/json');xhr.setRequestHeader('Accept','application/json');xhr.timeout=15000;xhr.onload=function(){btn.textContent='提交';btn.disabled=false;closeSubmitModal();var box=document.getElementById('submitBox');box.innerHTML='<div class="submit-ok"><div class="big">✅</div><h3>提交成功！</h3><p style="font-size:0.85rem;color:#666;margin-top:8px">'+name+'，结果已发送给老师</p></div>';setTimeout(function(){box.innerHTML='<h3>📤 提交你的答案</h3><p style="font-size:0.8rem;color:#888;margin-bottom:12px">提交后老师会收到你的模型截图</p><input type="text" id="studentName" placeholder="输入你的姓名" maxlength="20"><div class="btn-row"><button class="btn-cancel" onclick="closeSubmitModal()">取消</button><button class="btn-send" id="sendBtn" onclick="doSubmit()">提交</button></div>';},2500);};xhr.onerror=function(){btn.textContent='提交';btn.disabled=false;alert('邮件发送失败，请重试');};xhr.ontimeout=function(){btn.textContent='提交';btn.disabled=false;alert('发送超时，请重试');};xhr.send(JSON.stringify(payload));}function proceed(){try{html2canvas(canvas,{backgroundColor:'#ffffff',scale:1.5,useCORS:true,logging:false}).then(function(canvasImg){btn.textContent='上传图片...';canvasImg.toBlob(function(blob){uploadImg(blob,function(url){onDone(url);});},'image/jpeg',0.7);}).catch(function(e){onDone('');});}catch(e){onDone('');}}if(typeof html2canvas==='undefined'){loadScript('https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js?v=16',proceed);}else{proceed();}}
+window.addEventListener('resize',function(){drawArrows();});
+window.addEventListener('orientationchange',function(){setTimeout(drawArrows,300);});
 </script>
 </body>
 </html>
