@@ -6,7 +6,7 @@
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-<title>体液免疫交互模型 v9</title>
+<title>体液免疫交互模型</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{width:100%;height:100%;overflow:hidden;font-family:-apple-system,BlinkMacSystemFont,'PingFang SC','Microsoft YaHei',sans-serif;background:#fff;color:#333}
@@ -45,19 +45,18 @@ body{display:flex;flex-direction:column;touch-action:manipulation}
 .controls{padding:5px 8px;background:#f7f9f4;border-top:2px solid #d8e0d0;display:flex;gap:5px;justify-content:center;flex-shrink:0;flex-wrap:wrap}
 .controls button{padding:7px 13px;border:none;border-radius:16px;font-size:0.78rem;cursor:pointer;font-weight:600}
 .controls button:active{transform:scale(0.95)}
-.btn-check{background:#2c5f2d;color:#fff}
+.btn-submit{background:#e67e22;color:#fff}
 .btn-reset{background:#95a5a6;color:#fff}
-.btn-tip{background:#2980b9;color:#fff}
 .btn-del{background:#e74c3c;color:#fff}
 .btn-del.active{background:#c0392b;box-shadow:0 0 0 2px rgba(231,76,60,0.3)}
-.btn-submit{background:#e67e22;color:#fff}
+.btn-undo{background:#3498db;color:#fff}
+.btn-undo:disabled{background:#bdc3c7}
 .feedback{position:absolute;top:8px;left:50%;transform:translateX(-50%);background:#fff8e1;border:2px solid #ffc107;border-radius:10px;padding:10px 14px;max-width:94%;width:340px;z-index:100;display:none;box-shadow:0 4px 20px rgba(0,0,0,0.15)}
 .feedback.show{display:block}
 .feedback.ok{background:#e8f5e9;border-color:#4caf50}
 .feedback h4{font-size:0.9rem;margin-bottom:5px}
 .feedback ul{padding-left:16px;font-size:0.78rem;line-height:1.6;color:#555}
 .feedback .close-fb{float:right;cursor:pointer;font-size:1.1rem;color:#999;padding:0 4px;line-height:1}
-.zone-label{position:absolute;font-size:0.6rem;color:#ccc;pointer-events:none;z-index:1;transform:translate(-50%,-50%)}
 .rotate-tip{position:fixed;bottom:60px;left:50%;transform:translateX(-50%);background:rgba(44,95,45,0.9);color:#fff;padding:6px 14px;border-radius:16px;font-size:0.72rem;z-index:99;display:none}
 .rotate-tip.show{display:block;animation:fadeIn 0.5s}
 @keyframes fadeIn{from{opacity:0}to{opacity:1}}
@@ -114,11 +113,10 @@ body{display:flex;flex-direction:column;touch-action:manipulation}
   </div>
 </div>
 <div class="controls">
-  <button class="btn-tip" onclick="showTips()">💡 提示</button>
+  <button class="btn-undo" id="btnUndo" onclick="undoLast()">↩️ 撤回</button>
   <button class="btn-del" id="btnDel" onclick="toggleDel()">🗑 删除</button>
   <button class="btn-reset" onclick="resetAll()">🔄 重置</button>
   <button class="btn-submit" onclick="showSubmitModal()">📤 提交答案</button>
-  <button class="btn-check" onclick="checkModel()">✅ 检查</button>
 </div>
 <div class="rotate-tip" id="rotateTip">💡 横屏使用效果更佳</div>
 <div class="submit-modal" id="submitModal">
@@ -146,27 +144,23 @@ var TARGETS = {
   virus:{x:10,y:55}, apc:{x:27,y:55}, helperT:{x:44,y:22},
   bcell:{x:60,y:58}, memory:{x:77,y:20}, plasma:{x:77,y:82}, antibody:{x:91,y:82}
 };
-var HINTS = {
-  virus:'病毒是免疫反应的起点，思考它和谁最先接触',
-  apc:'它负责摄取、处理和呈递抗原，想想它和病毒、T细胞的关系',
-  helperT:'它接受APC呈递的信号后被激活，再作用于B细胞',
-  bcell:'B细胞需要抗原和辅助性T细胞的两个信号才能活化增殖',
-  memory:'B细胞活化后会分化为两种细胞，一种长期存活',
-  plasma:'另一种分化方向专门负责产生免疫活性物质',
-  antibody:'它能与抗原特异性结合，是谁产生的？'
-};
 var REQUIRED_ARROWS = [
   {from:'virus',to:'apc'},{from:'apc',to:'helperT'},{from:'helperT',to:'bcell'},
   {from:'bcell',to:'plasma'},{from:'bcell',to:'memory'},{from:'plasma',to:'antibody'}
 ];
 var elements = [];
 var arrows = [];
+var undoStack = [];
 var dragEl = null, dragOffsetX = 0, dragOffsetY = 0;
 var delMode = false, arrowMode = false, arrowSource = null;
 var eid = 0;
 var canvas = document.getElementById('canvas');
 var svg = document.getElementById('arrowSvg');
 var rafPending = false;
+function updateUndoBtn(){
+  var btn = document.getElementById('btnUndo');
+  btn.disabled = undoStack.length === 0;
+}
 function loadScript(src, cb){
   var s = document.createElement('script');
   s.src = src; s.onload = cb;
@@ -200,6 +194,8 @@ function addElement(type, xPct, yPct){
   canvas.appendChild(el);
   var obj = {id: ++eid, type: type, el: el, x: xPct, y: yPct, lineEl: null};
   elements.push(obj);
+  undoStack.push({action:'addElement', id: obj.id});
+  updateUndoBtn();
   makeDraggable(obj);
 }
 function getCenter(el){
@@ -321,6 +317,8 @@ function handleDelete(obj){
   var ne = [];
   for(var j=0; j<elements.length; j++){ if(elements[j].id!==obj.id) ne.push(elements[j]); }
   elements = ne;
+  undoStack = [];
+  updateUndoBtn();
   drawArrows();
 }
 function handleArrowClick(obj){
@@ -332,10 +330,36 @@ function handleArrowClick(obj){
     arrowSource = null;
   } else {
     arrows.push({fromId: arrowSource.id, toId: obj.id});
+    undoStack.push({action:'addArrow', fromId: arrowSource.id, toId: obj.id});
+    updateUndoBtn();
     clearArrowSourceHighlight();
     arrowSource = null;
     drawArrows();
   }
+}
+function undoLast(){
+  if(undoStack.length === 0) return;
+  var action = undoStack.pop();
+  if(action.action === 'addElement'){
+    var el = findById(action.id);
+    if(el){
+      var na = [];
+      for(var i=0; i<arrows.length; i++){ if(arrows[i].fromId!==el.id && arrows[i].toId!==el.id) na.push(arrows[i]); }
+      arrows = na;
+      el.el.remove();
+      var ne = [];
+      for(var j=0; j<elements.length; j++){ if(elements[j].id!==el.id) ne.push(elements[j]); }
+      elements = ne;
+    }
+  } else if(action.action === 'addArrow'){
+    var na2 = [];
+    for(var k=0; k<arrows.length; k++){
+      if(!(arrows[k].fromId===action.fromId && arrows[k].toId===action.toId)) na2.push(arrows[k]);
+    }
+    arrows = na2;
+  }
+  updateUndoBtn();
+  drawArrows();
 }
 function toggleDel(){
   delMode = !delMode; arrowMode = false; clearArrowSourceHighlight();
@@ -346,24 +370,9 @@ function toggleDel(){
 }
 function resetAll(){
   for(var i=0; i<elements.length; i++) elements[i].el.remove();
-  elements = []; arrows = [];
+  elements = []; arrows = []; undoStack = [];
+  updateUndoBtn();
   drawArrows(); hideFb();
-}
-function showTips(){
-  var keys = Object.keys(TARGETS);
-  for(var i=0; i<keys.length; i++){
-    var type = keys[i];
-    var existing = false;
-    for(var j=0; j<elements.length; j++){ if(elements[j].type===type){ existing=true; break; } }
-    if(!existing){
-      var el = document.createElement('div');
-      el.className = 'zone-label';
-      el.style.left = TARGETS[type].x + '%'; el.style.top = TARGETS[type].y + '%';
-      el.textContent = '📍' + CELL_INFO[type].name;
-      canvas.appendChild(el);
-      (function(e){ setTimeout(function(){ e.remove(); }, 3000); })(el);
-    }
-  }
 }
 function checkModel(){
   var results = [], allOk = true;
@@ -371,13 +380,11 @@ function checkModel(){
   for(var i=0; i<keys.length; i++){
     var type = keys[i], placed = [];
     for(var j=0; j<elements.length; j++){ if(elements[j].type===type) placed.push(elements[j]); }
-    if(placed.length === 0){
-      results.push('❌ 缺少【' + CELL_INFO[type].name + '】'); allOk = false; continue;
-    }
+    if(placed.length === 0){ results.push('缺少' + CELL_INFO[type].name); allOk = false; continue; }
     var o = placed[0];
     var dx = Math.abs(o.x - TARGETS[type].x), dy = Math.abs(o.y - TARGETS[type].y);
-    if(dx <= 15 && dy <= 18){ results.push('✅ ' + CELL_INFO[type].name + '位置正确'); }
-    else { results.push('🤔 ' + CELL_INFO[type].name + '的位置再想想——' + HINTS[type]); allOk = false; }
+    if(dx <= 15 && dy <= 18){ results.push(CELL_INFO[type].name + '位置正确'); }
+    else { results.push(CELL_INFO[type].name + '位置待调整'); allOk = false; }
   }
   var byType = {};
   for(var k=0; k<elements.length; k++){ if(!byType[elements[k].type]) byType[elements[k].type] = elements[k]; }
@@ -389,27 +396,9 @@ function checkModel(){
     for(var n=0; n<arrows.length; n++){
       if(arrows[n].fromId===fromEl.id && arrows[n].toId===toEl.id){ hasArrow=true; break; }
     }
-    if(!hasArrow){ results.push('↗️ ' + CELL_INFO[ra.from].name + '和' + CELL_INFO[ra.to].name + '之间需要箭头'); allOk = false; }
-    else { results.push('✅ 箭头 ' + CELL_INFO[ra.from].name + '→' + CELL_INFO[ra.to].name); }
+    if(!hasArrow){ results.push(CELL_INFO[ra.from].name + '→' + CELL_INFO[ra.to].name + '需要箭头'); allOk = false; }
   }
-  showFb(allOk, results);
   return allOk;
-}
-function showFb(ok, results){
-  var fb = document.getElementById('feedback');
-  document.getElementById('fbTitle').innerHTML = ok ? '🎉 恭喜！完全正确！' : '📋 检查结果';
-  var list = document.getElementById('fbList');
-  fb.className = 'feedback show' + (ok ? ' ok' : '');
-  list.innerHTML = '';
-  for(var i=0; i<results.length; i++){
-    var li = document.createElement('li'); li.textContent = results[i]; list.appendChild(li);
-  }
-  if(ok){
-    var tip = document.createElement('li');
-    tip.style.marginTop='6px'; tip.style.color='#2c5f2d';
-    tip.textContent = '流程：诺如病毒→抗原呈递细胞→辅助性T细胞→B细胞→浆细胞+记忆B细胞→抗体';
-    list.appendChild(tip);
-  }
 }
 function hideFb(){ document.getElementById('feedback').className='feedback'; }
 function showSubmitModal(){
@@ -476,13 +465,11 @@ function doSubmit(){
           up.ontimeout = function(){ onDone(''); };
           up.send(fd);
         }, 'image/png');
-      }).catch(function(e){
-        onDone('');
-      });
+      }).catch(function(e){ onDone(''); });
     } catch(e) { onDone(''); }
   }
   if(typeof html2canvas === 'undefined'){
-    loadScript('https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js?v=9', proceed);
+    loadScript('https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js?v=10', proceed);
   } else { proceed(); }
 }
 window.addEventListener('resize', function(){ drawArrows(); });
